@@ -7,17 +7,17 @@
 # This file should be included when you package your plugin.# Mandatory items:
 
 [general]
-name=Cable Diagram Renderer
-qgisMinimumVersion=3.10
-description=Custom cable diagram renderer
+name=Vector Correction
+qgisMinimumVersion=3.19
+description=Correct vector datasets via GCP
 version=0.0.1
 author=North Road
 email=nyall@north-road.com
 
-about=Renders custom cable diagrams
+about=Correct vector datasets via GCP
 
-tracker=https://gitlab.com/northroad-bba/qgis-plugin-for-svg-rendering/-/issues
-repository=https://gitlab.com/northroad-bba/qgis-plugin-for-svg-rendering
+tracker=https://github.com/north-road/vector_correction/issues
+repository=https://github.com/north-road/vector_correction
 # End of mandatory metadata
 
 # Recommended items:
@@ -28,7 +28,7 @@ changelog=0.0.1 Initial release
 # Tags are comma separated with spaces allowed
 tags=python
 
-homepage=https://gitlab.com/northroad-bba/qgis-plugin-for-svg-rendering
+homepage=https://github.com/north-road/vector_correction/issues
 category=Plugins
 icon=icon.png
 # experimental flag

@@ -17,10 +17,25 @@ import os
 
 from qgis.PyQt.QtCore import (QTranslator,
                               QCoreApplication)
-from qgis.core import QgsApplication
+from qgis.PyQt.QtWidgets import (
+    QToolBar,
+    QAction
+)
+from qgis.core import (
+    QgsApplication,
+    QgsVectorLayer,
+    QgsCoordinateReferenceSystem,
+    QgsProject,
+    QgsFeature,
+    QgsPointXY,
+    QgsFeatureRequest
+)
 from qgis.gui import (
     QgisInterface
 )
+
+from vector_correction.core.gcp_manager import GcpManager
+from vector_correction.gui.draw_line_tool import DrawLineTool
 
 VERSION = '0.0.1'
 
@@ -53,6 +68,16 @@ class VectorCorrectionPlugin:
             self.translator.load(locale_path)
             QCoreApplication.installTranslator(self.translator)
 
+        self.toolbar = None
+        self.draw_correction_action = None
+        self.map_tool = None
+        self.temp_layer = None
+        self.show_gcps_action = None
+        self.apply_correction_action = None
+        self.actions = []
+
+        self.gcp_manager = GcpManager()
+
     @staticmethod
     def tr(message):
         """Get the translation for a string using Qt translation API.
@@ -75,5 +100,92 @@ class VectorCorrectionPlugin:
         """Creates application GUI widgets"""
         self.initProcessing()
 
+        self.toolbar = QToolBar(self.tr('Vector Correction Toolbar'))
+        self.toolbar.setObjectName('vectorCorrectionToolbar')
+        self.iface.addToolBar(self.toolbar)
+
+        self.draw_correction_action = QAction(self.tr('Draw Correction'), parent=self.toolbar)
+        self.toolbar.addAction(self.draw_correction_action)
+        self.draw_correction_action.triggered.connect(self.draw_correction)
+        self.actions.append(self.draw_correction_action)
+
+        self.show_gcps_action = QAction(self.tr('Show GCPS'), parent=self.toolbar)
+        self.toolbar.addAction(self.show_gcps_action)
+        self.show_gcps_action.triggered.connect(self.show_gcps)
+        self.actions.append(self.show_gcps_action)
+
+        self.apply_correction_action = QAction(self.tr('Apply Correction'), parent=self.toolbar)
+        self.toolbar.addAction(self.apply_correction_action)
+        self.apply_correction_action.triggered.connect(self.apply_correction)
+        self.actions.append(self.apply_correction_action)
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
+        for a in self.actions:
+            a.deleteLater()
+        self.actions = []
+
+        if self.toolbar is not None:
+            self.toolbar.deleteLater()
+            self.toolbar = None
+        if self.map_tool is not None:
+            self.map_tool.deleteLater()
+            self.map_tool = None
+        if self.temp_layer is not None:
+            self.temp_layer.deleteLater()
+            self.temp_layer = None
+
+    def draw_correction(self):
+        """
+        Triggers the draw correction map tool
+        """
+
+        layer_options = QgsVectorLayer.LayerOptions(QgsProject.instance().transformContext())
+        layer_options.skipCrsValidation = True
+        self.temp_layer = QgsVectorLayer('LineString', 'f', 'memory', layer_options)
+        self.temp_layer.setCrs(QgsCoordinateReferenceSystem())
+        self.temp_layer.startEditing()
+        self.map_tool = DrawLineTool(self.iface.mapCanvas(), self.iface.cadDockWidget())
+        self.map_tool.setLayer(self.temp_layer)
+        self.map_tool.digitizingCompleted.connect(self._correction_added)
+        self.iface.mapCanvas().setMapTool(self.map_tool)
+
+    def _correction_added(self, feature: QgsFeature):
+        """
+        Triggered when a new correction line is digitized
+        """
+        digitize_line = feature.geometry()
+        self.gcp_manager.add_gcp(QgsPointXY(digitize_line.constGet().startPoint()),
+                                 QgsPointXY(digitize_line.constGet().endPoint()))
+
+    def show_gcps(self):
+        """
+        Shows the list of GCPs
+        """
+        transformer = self.gcp_manager.to_gcp_transformer()
+
+        assert False, transformer
+
+    def apply_correction(self):
+        """
+        Applies the defined corrections to visible features
+        """
+        target_layer = self.iface.activeLayer()
+
+        features = target_layer.getFeatures(QgsFeatureRequest().setFilterRect(self.iface.mapCanvas().mapSettings().visibleExtent()).setNoAttributes())
+        feature_map = {
+            f.id(): f.geometry()
+            for f in features
+        }
+
+        target_layer.beginEditCommand(self.tr('Correct features'))
+        transformed_features = self.gcp_manager.transform_features(feature_map)
+        for _id, geometry in transformed_features.items():
+            target_layer.changeGeometry(_id, geometry, True)
+
+        target_layer.endEditCommand()
+        target_layer.triggerRepaint()
+
+
+
+
