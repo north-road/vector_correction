@@ -76,7 +76,7 @@ class VectorCorrectionPlugin:
         self.apply_correction_action = None
         self.actions = []
 
-        self.gcp_manager = GcpManager()
+        self.gcp_manager = GcpManager(self.iface.mapCanvas())
 
     @staticmethod
     def tr(message):
@@ -121,6 +121,8 @@ class VectorCorrectionPlugin:
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
+        self.gcp_manager.clear()
+
         for a in self.actions:
             a.deleteLater()
         self.actions = []

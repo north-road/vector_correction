@@ -16,12 +16,13 @@ __revision__ = '$Format:%H$'
 from typing import Dict
 
 from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QMouseEvent
+from qgis.PyQt.QtGui import QMouseEvent, QColor
 
 from qgis.core import (
     QgsPointXY,
     QgsGeometry,
-    QgsRectangle
+    QgsRectangle,
+    QgsWkbTypes
 )
 from qgis.analysis import (
     QgsGcpTransformerInterface,
@@ -34,6 +35,7 @@ from qgis.gui import (
     QgsMapCanvas,
     QgsAdvancedDigitizingDockWidget,
     QgsMapMouseEvent,
+    QgsRubberBand
 )
 
 
@@ -42,7 +44,18 @@ class GcpManager:
     Manages a collection of GCPs
     """
 
-    def __init__(self):
+    def __init__(self, map_canvas: QgsMapCanvas):
+        self.map_canvas = map_canvas
+        self.gcps = []
+        self.rubber_bands = []
+
+    def clear(self):
+        """
+        Clears the GCP manager
+        """
+        for band in self.rubber_bands:
+            self.map_canvas.scene().removeItem(band)
+        self.rubber_bands = []
         self.gcps = []
 
     def add_gcp(self, origin: QgsPointXY, destination: QgsPointXY):
@@ -50,6 +63,13 @@ class GcpManager:
         Adds a GCP
         """
         self.gcps.append((origin, destination))
+
+        rubber_band = QgsRubberBand(self.map_canvas, QgsWkbTypes.LineGeometry)
+        rubber_band.addPoint(origin, False)
+        rubber_band.addPoint(destination, True)
+        rubber_band.setStrokeColor(QColor(255,0,0))
+
+        self.rubber_bands.append(rubber_band)
 
     def to_gcp_transformer(self):
         """
