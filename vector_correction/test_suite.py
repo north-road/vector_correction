@@ -43,7 +43,7 @@ def _run_tests(test_suite, package_name, with_coverage=False):
     print('########')
     if with_coverage:
         cov = coverage.Coverage(
-            source=['/processing_r'],
+            source=['/vector_correction'],
             omit=['*/test/*'],
         )
         cov.start()
@@ -62,7 +62,7 @@ def _run_tests(test_suite, package_name, with_coverage=False):
             print(fin.read())
 
 
-def test_package(package='processing_r'):
+def test_package(package='vector_correction'):
     """Test package.
     This function is called by travis without arguments.
 
@@ -79,7 +79,7 @@ def test_package(package='processing_r'):
 
 def test_environment():
     """Test package with an environment variable."""
-    package = os.environ.get('TESTING_PACKAGE', 'processing_r')
+    package = os.environ.get('TESTING_PACKAGE', 'vector_correction')
     test_loader = unittest.defaultTestLoader
     test_suite = test_loader.discover(package)
     _run_tests(test_suite, package)
