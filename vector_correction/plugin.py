@@ -172,14 +172,20 @@ class VectorCorrectionPlugin:
         """
         target_layer = self.iface.activeLayer()
 
-        features = target_layer.getFeatures(QgsFeatureRequest().setFilterRect(self.iface.mapCanvas().mapSettings().visibleExtent()).setNoAttributes())
+        extent = self.iface.mapCanvas().mapSettings().visibleExtent()
+
+        features = target_layer.getFeatures(QgsFeatureRequest().setFilterRect(extent).setNoAttributes())
         feature_map = {
             f.id(): f.geometry()
             for f in features
         }
 
         target_layer.beginEditCommand(self.tr('Correct features'))
-        transformed_features = self.gcp_manager.transform_features(feature_map)
+        transformed_features = self.gcp_manager.transform_features(feature_map, extent)
+
+        if any(g.isNull() for g in transformed_features.values()):
+            assert False
+
         for _id, geometry in transformed_features.items():
             target_layer.changeGeometry(_id, geometry, True)
 

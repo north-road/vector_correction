@@ -20,7 +20,8 @@ from qgis.PyQt.QtGui import QMouseEvent
 
 from qgis.core import (
     QgsPointXY,
-    QgsGeometry
+    QgsGeometry,
+    QgsRectangle
 )
 from qgis.analysis import (
     QgsGcpTransformerInterface,
@@ -32,7 +33,7 @@ from qgis.gui import (
     QgsMapToolCapture,
     QgsMapCanvas,
     QgsAdvancedDigitizingDockWidget,
-    QgsMapMouseEvent
+    QgsMapMouseEvent,
 )
 
 
@@ -54,10 +55,10 @@ class GcpManager:
         """
         Creates a GCP transformer using the points added to this manager
         """
-        return QgsGcpTransformerInterface.createFromParameters(QgsGcpTransformerInterface.TransformMethod.Projective,
+        return QgsGcpTransformerInterface.createFromParameters(QgsGcpTransformerInterface.TransformMethod.PolynomialOrder1,
                                                                [p[0] for p in self.gcps], [p[1] for p in self.gcps])
 
-    def transform_features(self, features: Dict[int, QgsGeometry]):
+    def transform_features(self, features: Dict[int, QgsGeometry], extent: QgsRectangle):
         """
         Transforms the specified set of geometries
         """
@@ -66,9 +67,32 @@ class GcpManager:
         transformer = QgsGcpGeometryTransformer(gcp_transformer)
 
         return {
-          _id: transformer.transform(geom)[0]
+          _id: GcpManager.transform_vertices_in_extent(transformer, geom, extent)
           for _id, geom in features.items()
         }
+
+    @staticmethod
+    def transform_vertices_in_extent(transformer: QgsGcpGeometryTransformer, geometry: QgsGeometry, extent: QgsRectangle) -> QgsGeometry:
+        """
+        Transforms only the vertices within the specified extent
+        """
+        to_transform = {}
+
+        for n, point in enumerate(geometry.vertices()):
+            if extent.contains(QgsPointXY(point.x(), point.y())):
+                to_transform[n] = point
+
+        for n, point in to_transform.items():
+            ok, transformed_x, transformed_y = transformer.gcpTransformer().transform(point.x(), point.y())
+            if not ok:
+                return QgsGeometry()
+
+            geometry.moveVertex(transformed_x, transformed_y, n)
+
+        return geometry
+
+
+
 
 
 
