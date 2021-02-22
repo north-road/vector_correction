@@ -23,7 +23,8 @@ jobs:
 
     strategy:
       matrix:
-        docker_tags: [ release-3_10, release-3_14, release-3_16, latest]
+        # requires QGIS >= 3.20
+        docker_tags: [latest]
 
     steps:
 
