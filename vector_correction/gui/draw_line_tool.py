@@ -17,6 +17,7 @@ from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtGui import QMouseEvent
 
 from qgis.core import (
+    Qgis,
     QgsProject,
     QgsVectorLayer,
     QgsFeatureRequest,
@@ -29,7 +30,8 @@ from qgis.gui import (
     QgsMapCanvas,
     QgsAdvancedDigitizingDockWidget,
     QgsMapMouseEvent,
-    QgsRubberBand
+    QgsRubberBand,
+    QgsMessageBar
 )
 
 
@@ -40,9 +42,12 @@ class DrawLineTool(QgsMapToolDigitizeFeature):
 
     MAX_PREVIEW_GEOMETRIES = 10000
 
-    def __init__(self, map_canvas: QgsMapCanvas, cad_dock_widget: QgsAdvancedDigitizingDockWidget):
+    def __init__(self,
+                 map_canvas: QgsMapCanvas,
+                 cad_dock_widget: QgsAdvancedDigitizingDockWidget,
+                 message_bar: QgsMessageBar):
         super().__init__(map_canvas, cad_dock_widget, QgsMapToolCapture.CaptureLine)
-
+        self.message_bar = message_bar
         self.temporary_geometries = []
         self.rubber_band = None
         self.start_point = None
@@ -94,5 +99,9 @@ class DrawLineTool(QgsMapToolDigitizeFeature):
 
                     self.rubber_band.updatePosition()
                     self.rubber_band.update()
+                else:
+                    self.message_bar.pushMessage(None,
+                                                 self.tr('No visible layers are set to allow edits'),
+                                                 Qgis.Warning, duration=QgsMessageBar.defaultMessageTimeout(Qgis.Info))
 
             super().cadCanvasReleaseEvent(e)

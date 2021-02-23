@@ -147,7 +147,9 @@ class VectorCorrectionPlugin:
         self.temp_layer = QgsVectorLayer('LineString', 'f', 'memory', layer_options)
         self.temp_layer.setCrs(QgsCoordinateReferenceSystem())
         self.temp_layer.startEditing()
-        self.map_tool = DrawLineTool(self.iface.mapCanvas(), self.iface.cadDockWidget())
+        self.map_tool = DrawLineTool(map_canvas=self.iface.mapCanvas(),
+                                     cad_dock_widget=self.iface.cadDockWidget(),
+                                     message_bar=self.iface.messageBar())
         self.map_tool.setLayer(self.temp_layer)
         self.map_tool.digitizingCompleted.connect(self._correction_added)
         self.iface.mapCanvas().setMapTool(self.map_tool)
