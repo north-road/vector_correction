@@ -193,7 +193,3 @@ class VectorCorrectionPlugin:
 
         target_layer.endEditCommand()
         target_layer.triggerRepaint()
-
-
-
-

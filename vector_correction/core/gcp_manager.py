@@ -15,59 +15,104 @@ __revision__ = '$Format:%H$'
 
 from typing import Dict
 
-from qgis.PyQt.QtCore import Qt
-from qgis.PyQt.QtGui import QMouseEvent, QColor
-
+from qgis.PyQt.QtCore import (
+    Qt,
+    QAbstractTableModel,
+    QModelIndex,
+    QObject
+)
+from qgis.PyQt.QtGui import QColor
+from qgis.analysis import (
+    QgsGcpTransformerInterface,
+    QgsGcpGeometryTransformer
+)
 from qgis.core import (
     QgsPointXY,
     QgsGeometry,
     QgsRectangle,
     QgsWkbTypes
 )
-from qgis.analysis import (
-    QgsGcpTransformerInterface,
-    QgsGcpGeometryTransformer
-)
-
 from qgis.gui import (
-    QgsMapToolDigitizeFeature,
-    QgsMapToolCapture,
     QgsMapCanvas,
-    QgsAdvancedDigitizingDockWidget,
-    QgsMapMouseEvent,
     QgsRubberBand
 )
 
 
-class GcpManager:
+class GcpManager(QAbstractTableModel):
     """
     Manages a collection of GCPs
     """
 
-    def __init__(self, map_canvas: QgsMapCanvas):
+    COLUMN_ID = 0
+    COLUMN_ORIGIN_X = 1
+    COLUMN_ORIGIN_Y = 2
+    COLUMN_DESTINATION_X = 3
+    COLUMN_DESTINATION_Y = 4
+
+    def __init__(self, map_canvas: QgsMapCanvas, parent: QObject = None):
+        super().__init__(parent)
         self.map_canvas = map_canvas
         self.gcps = []
         self.rubber_bands = []
+
+    def rowCount(self,  # pylint: disable=missing-function-docstring
+                 parent: QModelIndex = QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+        return len(self.gcps)
+
+    def columnCount(self,  # pylint: disable=missing-function-docstring
+                    parent: QModelIndex = QModelIndex()) -> int:
+        if parent.isValid():
+            return 0
+        return 5
+
+    def data(self,  # pylint: disable=missing-function-docstring, too-many-return-statements
+             index: QModelIndex,
+             role: int = Qt.DisplayRole):
+        if index.row() < 0 or index.row() >= len(self.gcps):
+            return None
+
+        if role in (Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole):
+            if index.column() == GcpManager.COLUMN_ID:
+                return index.row() + 1
+            if index.column() == GcpManager.COLUMN_ORIGIN_X:
+                return self.gcps[index.row()][0].x()
+            if index.column() == GcpManager.COLUMN_ORIGIN_Y:
+                return self.gcps[index.row()][0].y()
+            if index.column() == GcpManager.COLUMN_DESTINATION_X:
+                return self.gcps[index.row()][1].x()
+            if index.column() == GcpManager.COLUMN_DESTINATION_Y:
+                return self.gcps[index.row()][1].y()
+
+        return None
 
     def clear(self):
         """
         Clears the GCP manager
         """
+        if not self.gcps:
+            return
+
+        self.beginRemoveRows(QModelIndex(), 0, len(self.gcps) - 1)
         for band in self.rubber_bands:
             self.map_canvas.scene().removeItem(band)
         self.rubber_bands = []
         self.gcps = []
+        self.endRemoveRows()
 
     def add_gcp(self, origin: QgsPointXY, destination: QgsPointXY):
         """
         Adds a GCP
         """
+        self.beginInsertRows(QModelIndex(), len(self.gcps), len(self.gcps))
         self.gcps.append((origin, destination))
+        self.endInsertRows()
 
         rubber_band = QgsRubberBand(self.map_canvas, QgsWkbTypes.LineGeometry)
         rubber_band.addPoint(origin, False)
         rubber_band.addPoint(destination, True)
-        rubber_band.setStrokeColor(QColor(255,0,0))
+        rubber_band.setStrokeColor(QColor(255, 0, 0))
 
         self.rubber_bands.append(rubber_band)
 
@@ -75,24 +120,25 @@ class GcpManager:
         """
         Creates a GCP transformer using the points added to this manager
         """
-        return QgsGcpTransformerInterface.createFromParameters(QgsGcpTransformerInterface.TransformMethod.PolynomialOrder1,
-                                                               [p[0] for p in self.gcps], [p[1] for p in self.gcps])
+        return QgsGcpTransformerInterface.createFromParameters(
+            QgsGcpTransformerInterface.TransformMethod.PolynomialOrder1,
+            [p[0] for p in self.gcps], [p[1] for p in self.gcps])
 
     def transform_features(self, features: Dict[int, QgsGeometry], extent: QgsRectangle):
         """
         Transforms the specified set of geometries
         """
-
         gcp_transformer = self.to_gcp_transformer()
         transformer = QgsGcpGeometryTransformer(gcp_transformer)
 
         return {
-          _id: GcpManager.transform_vertices_in_extent(transformer, geom, extent)
-          for _id, geom in features.items()
+            _id: GcpManager.transform_vertices_in_extent(transformer, geom, extent)
+            for _id, geom in features.items()
         }
 
     @staticmethod
-    def transform_vertices_in_extent(transformer: QgsGcpGeometryTransformer, geometry: QgsGeometry, extent: QgsRectangle) -> QgsGeometry:
+    def transform_vertices_in_extent(transformer: QgsGcpGeometryTransformer, geometry: QgsGeometry,
+                                     extent: QgsRectangle) -> QgsGeometry:
         """
         Transforms only the vertices within the specified extent
         """
@@ -110,10 +156,3 @@ class GcpManager:
             geometry.moveVertex(transformed_x, transformed_y, n)
 
         return geometry
-
-
-
-
-
-
-

@@ -47,24 +47,25 @@ class DrawLineTool(QgsMapToolDigitizeFeature):
         self.rubber_band = None
         self.start_point = None
 
-    def cadCanvasMoveEvent(self, e):
+    def cadCanvasMoveEvent(self, e):  # pylint: disable=missing-function-docstring
         if self.rubber_band:
             self.rubber_band.setTranslationOffset(e.mapPoint().x() - self.start_point.x(),
-            e.mapPoint().y() - self.start_point.y())
+                                                  e.mapPoint().y() - self.start_point.y())
 
         super().cadCanvasMoveEvent(e)
 
-    def cadCanvasReleaseEvent(self, e):
-
+    def cadCanvasReleaseEvent(self, e):  # pylint: disable=missing-function-docstring
         if self.rubber_band is not None:
             self.canvas().scene().removeItem(self.rubber_band)
             self.rubber_band = None
 
-        if e.button() == Qt.LeftButton and self.captureCurve().numPoints() > 0:
+        if e.button() == Qt.LeftButton and self.captureCurve().numPoints() > 0:  # pylint: disable=too-many-nested-blocks
             super().cadCanvasReleaseEvent(e)
-            # second click = finish
 
-            finish_event = QgsMapMouseEvent(self.canvas(), QMouseEvent(e.type(), e.localPos(), Qt.RightButton, e.buttons(), e.modifiers()))
+            # second click = finish
+            finish_event = QgsMapMouseEvent(self.canvas(),
+                                            QMouseEvent(e.type(), e.localPos(), Qt.RightButton, e.buttons(),
+                                                        e.modifiers()))
 
             super().cadCanvasReleaseEvent(finish_event)
         else:
@@ -95,4 +96,3 @@ class DrawLineTool(QgsMapToolDigitizeFeature):
                     self.rubber_band.update()
 
             super().cadCanvasReleaseEvent(e)
-
