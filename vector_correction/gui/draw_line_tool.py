@@ -83,7 +83,13 @@ class DrawLineTool(QgsMapToolDigitizeFeature):
                 extent = self.canvas().mapSettings().visibleExtent()
                 for _, layer in QgsProject.instance().mapLayers().items():
                     if isinstance(layer, QgsVectorLayer) and layer.isEditable():
-                        for f in layer.getFeatures(QgsFeatureRequest().setFilterRect(extent).setNoAttributes()):
+                        request = QgsFeatureRequest()
+                        request.setDestinationCrs(self.canvas().mapSettings().destinationCrs(),
+                                                  QgsProject.instance().transformContext())
+                        request.setFilterRect(extent)
+                        request.setNoAttributes()
+
+                        for f in layer.getFeatures(request):
                             geometries.append(f.geometry())
 
                             if len(geometries) > DrawLineTool.MAX_PREVIEW_GEOMETRIES:

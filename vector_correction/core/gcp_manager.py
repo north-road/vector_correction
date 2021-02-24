@@ -28,8 +28,10 @@ from qgis.analysis import (
     QgsGcpGeometryTransformer
 )
 from qgis.core import (
+    QgsPoint,
     QgsPointXY,
     QgsGeometry,
+    QgsLineString,
     QgsRectangle,
     QgsWkbTypes,
     QgsLineSymbol,
@@ -126,8 +128,7 @@ class GcpManager(QAbstractTableModel):
         self.endInsertRows()
 
         rubber_band = self._create_rubber_band()
-        rubber_band.addPoint(origin, False)
-        rubber_band.addPoint(destination, True)
+        rubber_band.setToGeometry(QgsGeometry(QgsLineString(QgsPoint(origin), QgsPoint(destination))), crs)
         rubber_band.setStrokeColor(QColor(255, 0, 0))
 
         self.rubber_bands.append(rubber_band)
