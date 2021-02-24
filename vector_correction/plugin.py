@@ -28,7 +28,8 @@ from qgis.core import (
     QgsProject,
     QgsFeature,
     QgsPointXY,
-    QgsFeatureRequest
+    QgsFeatureRequest,
+    QgsCoordinateTransform
 )
 from qgis.gui import (
     QgisInterface
@@ -177,17 +178,32 @@ class VectorCorrectionPlugin:
         Applies the defined corrections to visible features
         """
         target_layer = self.iface.activeLayer()
+        layer_crs = target_layer.crs()
 
-        extent = self.iface.mapCanvas().mapSettings().visibleExtent()
+        canvas_extent = self.iface.mapCanvas().mapSettings().visibleExtent()
+        canvas_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
+        # we need to transform the canvas extent to the layer crs in order to filter features
+        canvas_to_layer_transform = QgsCoordinateTransform(canvas_crs,
+                                                           layer_crs,
+                                                           QgsProject.instance().transformContext())
+        layer_filter_rect = canvas_to_layer_transform.transformBoundingBox(canvas_extent)
 
-        features = target_layer.getFeatures(QgsFeatureRequest().setFilterRect(extent).setNoAttributes())
+        request = QgsFeatureRequest()
+        request.setFilterRect(layer_filter_rect)
+        request.setNoAttributes()
+
+        features = target_layer.getFeatures(request)
         feature_map = {
             f.id(): f.geometry()
             for f in features
         }
 
         target_layer.beginEditCommand(self.tr('Correct features'))
-        transformed_features = self.gcp_manager.transform_features(feature_map, extent)
+        transformed_features = self.gcp_manager.transform_features(
+            features=feature_map,
+            feature_crs=layer_crs,
+            extent=canvas_extent,
+            extent_crs=canvas_crs)
 
         if any(g.isNull() for g in transformed_features.values()):
             assert False

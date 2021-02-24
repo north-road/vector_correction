@@ -35,7 +35,9 @@ from qgis.core import (
     QgsRectangle,
     QgsWkbTypes,
     QgsLineSymbol,
-    QgsCoordinateReferenceSystem
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsProject
 )
 from qgis.gui import (
     QgsMapCanvas,
@@ -143,36 +145,59 @@ class GcpManager(QAbstractTableModel):
                                                           'capstyle': 'round'}))
         return rubber_band
 
-    def to_gcp_transformer(self):
+    def to_gcp_transformer(self, destination_crs: QgsCoordinateReferenceSystem):
         """
         Creates a GCP transformer using the points added to this manager
         """
+
+        origin_points = []
+        destination_points = []
+
+        for gcp in self.gcps:
+            ct = QgsCoordinateTransform(gcp.crs, destination_crs, QgsProject.instance().transformContext())
+            origin_points.append(ct.transform(gcp.origin))
+            destination_points.append(ct.transform(gcp.destination))
+
         return QgsGcpTransformerInterface.createFromParameters(
             QgsGcpTransformerInterface.TransformMethod.PolynomialOrder1,
-            [p.origin for p in self.gcps], [p.destination for p in self.gcps])
+            origin_points, destination_points)
 
-    def transform_features(self, features: Dict[int, QgsGeometry], extent: QgsRectangle):
+    def transform_features(self,
+                           features: Dict[int, QgsGeometry],
+                           feature_crs: QgsCoordinateReferenceSystem,
+                           extent: QgsRectangle,
+                           extent_crs: QgsCoordinateReferenceSystem
+                           ):
         """
         Transforms the specified set of geometries
         """
-        gcp_transformer = self.to_gcp_transformer()
+        gcp_transformer = self.to_gcp_transformer(feature_crs)
         transformer = QgsGcpGeometryTransformer(gcp_transformer)
 
+        feature_to_extent_transform = QgsCoordinateTransform(feature_crs,
+                                                             extent_crs,
+                                                             QgsProject.instance().transformContext())
+
         return {
-            _id: GcpManager.transform_vertices_in_extent(transformer, geom, extent)
+            _id: GcpManager.transform_vertices_in_extent(transformer, geom, extent, feature_to_extent_transform)
             for _id, geom in features.items()
         }
 
     @staticmethod
-    def transform_vertices_in_extent(transformer: QgsGcpGeometryTransformer, geometry: QgsGeometry,
-                                     extent: QgsRectangle) -> QgsGeometry:
+    def transform_vertices_in_extent(transformer: QgsGcpGeometryTransformer,
+                                     geometry: QgsGeometry,
+                                     extent: QgsRectangle,
+                                     geometry_to_extent_transform: QgsCoordinateTransform) -> QgsGeometry:
         """
         Transforms only the vertices within the specified extent
         """
         to_transform = {}
 
         for n, point in enumerate(geometry.vertices()):
-            if extent.contains(QgsPointXY(point.x(), point.y())):
+            # transform point to extent crs, in order to check exact intersection of the point and the visible extent
+            transformed_point = geometry_to_extent_transform.transform(QgsPointXY(point.x(), point.y()))
+
+            if extent.contains(transformed_point):
                 to_transform[n] = point
 
         for n, point in to_transform.items():
