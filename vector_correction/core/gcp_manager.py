@@ -30,7 +30,8 @@ from qgis.core import (
     QgsPointXY,
     QgsGeometry,
     QgsRectangle,
-    QgsWkbTypes
+    QgsWkbTypes,
+    QgsLineSymbol
 )
 from qgis.gui import (
     QgsMapCanvas,
@@ -109,12 +110,22 @@ class GcpManager(QAbstractTableModel):
         self.gcps.append((origin, destination))
         self.endInsertRows()
 
-        rubber_band = QgsRubberBand(self.map_canvas, QgsWkbTypes.LineGeometry)
+        rubber_band = self._create_rubber_band()
         rubber_band.addPoint(origin, False)
         rubber_band.addPoint(destination, True)
         rubber_band.setStrokeColor(QColor(255, 0, 0))
 
         self.rubber_bands.append(rubber_band)
+
+    def _create_rubber_band(self) -> QgsRubberBand:
+        """
+        Creates a new rubber band
+        """
+        rubber_band = QgsRubberBand(self.map_canvas, QgsWkbTypes.LineGeometry)
+        rubber_band.setSymbol(QgsLineSymbol.createSimple({'line_color': '#0000ff',
+                                                          'line_width': 1,
+                                                          'capstyle': 'round'}))
+        return rubber_band
 
     def to_gcp_transformer(self):
         """
