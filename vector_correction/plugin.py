@@ -36,6 +36,7 @@ from qgis.gui import (
 
 from vector_correction.core.gcp_manager import GcpManager
 from vector_correction.gui.draw_line_tool import DrawLineTool
+from vector_correction.gui.table_view import PointListWidget
 
 VERSION = '0.0.1'
 
@@ -166,9 +167,9 @@ class VectorCorrectionPlugin:
         """
         Shows the list of GCPs
         """
-        transformer = self.gcp_manager.to_gcp_transformer()
-
-        assert False, transformer
+        w = PointListWidget(self.gcp_manager)
+        w.show()
+        assert False
 
     def apply_correction(self):
         """
