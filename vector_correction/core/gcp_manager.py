@@ -13,7 +13,8 @@ __copyright__ = 'Copyright 2018, North Road'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
-from typing import Dict
+from dataclasses import dataclass
+from typing import Dict, List
 
 from qgis.PyQt.QtCore import (
     Qt,
@@ -31,12 +32,23 @@ from qgis.core import (
     QgsGeometry,
     QgsRectangle,
     QgsWkbTypes,
-    QgsLineSymbol
+    QgsLineSymbol,
+    QgsCoordinateReferenceSystem
 )
 from qgis.gui import (
     QgsMapCanvas,
     QgsRubberBand
 )
+
+
+@dataclass
+class Gcp:
+    """
+    Encapsulates a GCP
+    """
+    origin: QgsPointXY
+    destination: QgsPointXY
+    crs: QgsCoordinateReferenceSystem
 
 
 class GcpManager(QAbstractTableModel):
@@ -49,6 +61,9 @@ class GcpManager(QAbstractTableModel):
     COLUMN_ORIGIN_Y = 2
     COLUMN_DESTINATION_X = 3
     COLUMN_DESTINATION_Y = 4
+
+    gcps: List[Gcp]
+    rubber_bands: List[QgsRubberBand]
 
     def __init__(self, map_canvas: QgsMapCanvas, parent: QObject = None):
         super().__init__(parent)
@@ -78,13 +93,13 @@ class GcpManager(QAbstractTableModel):
             if index.column() == GcpManager.COLUMN_ID:
                 return index.row() + 1
             if index.column() == GcpManager.COLUMN_ORIGIN_X:
-                return self.gcps[index.row()][0].x()
+                return self.gcps[index.row()].origin.x()
             if index.column() == GcpManager.COLUMN_ORIGIN_Y:
-                return self.gcps[index.row()][0].y()
+                return self.gcps[index.row()].origin.y()
             if index.column() == GcpManager.COLUMN_DESTINATION_X:
-                return self.gcps[index.row()][1].x()
+                return self.gcps[index.row()].destination.x()
             if index.column() == GcpManager.COLUMN_DESTINATION_Y:
-                return self.gcps[index.row()][1].y()
+                return self.gcps[index.row()].destination.y()
 
         return None
 
@@ -102,12 +117,12 @@ class GcpManager(QAbstractTableModel):
         self.gcps = []
         self.endRemoveRows()
 
-    def add_gcp(self, origin: QgsPointXY, destination: QgsPointXY):
+    def add_gcp(self, origin: QgsPointXY, destination: QgsPointXY, crs: QgsCoordinateReferenceSystem):
         """
         Adds a GCP
         """
         self.beginInsertRows(QModelIndex(), len(self.gcps), len(self.gcps))
-        self.gcps.append((origin, destination))
+        self.gcps.append(Gcp(origin=origin, destination=destination, crs=crs))
         self.endInsertRows()
 
         rubber_band = self._create_rubber_band()
@@ -133,7 +148,7 @@ class GcpManager(QAbstractTableModel):
         """
         return QgsGcpTransformerInterface.createFromParameters(
             QgsGcpTransformerInterface.TransformMethod.PolynomialOrder1,
-            [p[0] for p in self.gcps], [p[1] for p in self.gcps])
+            [p.origin for p in self.gcps], [p.destination for p in self.gcps])
 
     def transform_features(self, features: Dict[int, QgsGeometry], extent: QgsRectangle):
         """

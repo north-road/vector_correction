@@ -160,8 +160,9 @@ class VectorCorrectionPlugin:
         Triggered when a new correction line is digitized
         """
         digitize_line = feature.geometry()
-        self.gcp_manager.add_gcp(QgsPointXY(digitize_line.constGet().startPoint()),
-                                 QgsPointXY(digitize_line.constGet().endPoint()))
+        self.gcp_manager.add_gcp(origin=QgsPointXY(digitize_line.constGet().startPoint()),
+                                 destination=QgsPointXY(digitize_line.constGet().endPoint()),
+                                 crs=self.iface.mapCanvas().mapSettings().destinationCrs())
 
     def show_gcps(self):
         """

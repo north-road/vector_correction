@@ -16,10 +16,13 @@ __revision__ = '$Format:%H$'
 
 import unittest
 
-from qgis.core import QgsPointXY
+from qgis.core import (
+    QgsPointXY,
+    QgsCoordinateReferenceSystem
+)
 from qgis.gui import QgsMapCanvas
 
-from vector_correction.core.gcp_manager import GcpManager
+from vector_correction.core.gcp_manager import GcpManager, Gcp
 from .utilities import get_qgis_app
 
 QGIS_APP = get_qgis_app()
@@ -49,7 +52,7 @@ class GCPManagerTest(unittest.TestCase):
         canvas = QgsMapCanvas()
         manager = GcpManager(canvas)
 
-        manager.add_gcp(QgsPointXY(10, 11), QgsPointXY(20, 22))
+        manager.add_gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), crs=QgsCoordinateReferenceSystem('EPSG:4326'))
 
         self.assertEqual(manager.rowCount(), 1)
         self.assertEqual(manager.data(manager.index(0, 0)), 1)
@@ -58,10 +61,11 @@ class GCPManagerTest(unittest.TestCase):
         self.assertEqual(manager.data(manager.index(0, 3)), 20.0)
         self.assertEqual(manager.data(manager.index(0, 4)), 22.0)
 
-        self.assertEqual(manager.gcps, [(QgsPointXY(10, 11), QgsPointXY(20, 22))])
+        self.assertEqual(manager.gcps,
+                         [Gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), QgsCoordinateReferenceSystem('EPSG:4326'))])
         self.assertEqual(len(manager.rubber_bands), 1)
 
-        manager.add_gcp(QgsPointXY(100, 101), QgsPointXY(200, 202))
+        manager.add_gcp(QgsPointXY(100, 101), QgsPointXY(200, 202), crs=QgsCoordinateReferenceSystem('EPSG:3111'))
 
         self.assertEqual(manager.rowCount(), 2)
         self.assertEqual(manager.data(manager.index(0, 0)), 1)
@@ -75,8 +79,9 @@ class GCPManagerTest(unittest.TestCase):
         self.assertEqual(manager.data(manager.index(1, 3)), 200.0)
         self.assertEqual(manager.data(manager.index(1, 4)), 202.0)
 
-        self.assertEqual(manager.gcps, [(QgsPointXY(10, 11), QgsPointXY(20, 22)),
-                                        (QgsPointXY(100, 101), QgsPointXY(200, 202))])
+        self.assertEqual(manager.gcps,
+                         [Gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), QgsCoordinateReferenceSystem('EPSG:4326')),
+                          Gcp(QgsPointXY(100, 101), QgsPointXY(200, 202), QgsCoordinateReferenceSystem('EPSG:3111'))])
         self.assertEqual(len(manager.rubber_bands), 2)
 
         manager.clear()
