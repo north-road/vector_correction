@@ -16,13 +16,20 @@ __revision__ = '$Format:%H$'
 
 import unittest
 
+from qgis.analysis import QgsGcpTransformerInterface
 from qgis.core import (
     QgsPointXY,
-    QgsCoordinateReferenceSystem
+    QgsCoordinateReferenceSystem,
+    QgsSettings
 )
 from qgis.gui import QgsMapCanvas
 
-from vector_correction.core.gcp_manager import GcpManager, Gcp
+from vector_correction.core.gcp_manager import (
+    GcpManager,
+    Gcp,
+    NotEnoughGcpsException,
+    TransformCreationException
+)
 from .utilities import get_qgis_app
 
 QGIS_APP = get_qgis_app()
@@ -91,6 +98,35 @@ class GCPManagerTest(unittest.TestCase):
         self.assertFalse(manager.data(manager.index(0, 2)))
         self.assertFalse(manager.gcps)
         self.assertFalse(manager.rubber_bands)
+
+    def test_create_transform(self):
+        """
+        Test creating transforms
+        """
+
+        settings = QgsSettings()
+        settings.setValue('vector_corrections/method', int(QgsGcpTransformerInterface.TransformMethod.PolynomialOrder1),
+                          QgsSettings.Plugins)
+
+        canvas = QgsMapCanvas()
+        manager = GcpManager(canvas)
+        with self.assertRaises(NotEnoughGcpsException):
+            manager.to_gcp_transformer(QgsCoordinateReferenceSystem('EPSG:4326'))
+
+        manager.add_gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), crs=QgsCoordinateReferenceSystem('EPSG:4326'))
+        manager.add_gcp(QgsPointXY(12, 13), QgsPointXY(21, 24), crs=QgsCoordinateReferenceSystem('EPSG:4326'))
+        manager.add_gcp(QgsPointXY(11, 15), QgsPointXY(23, 25), crs=QgsCoordinateReferenceSystem('EPSG:4326'))
+
+        self.assertIsNotNone(manager.to_gcp_transformer(QgsCoordinateReferenceSystem('EPSG:4326')))
+
+        manager.clear()
+
+        manager.add_gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), crs=QgsCoordinateReferenceSystem('EPSG:4326'))
+        manager.add_gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), crs=QgsCoordinateReferenceSystem('EPSG:4326'))
+        manager.add_gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), crs=QgsCoordinateReferenceSystem('EPSG:4326'))
+
+        with self.assertRaises(TransformCreationException):
+            manager.to_gcp_transformer(QgsCoordinateReferenceSystem('EPSG:4326'))
 
 
 if __name__ == "__main__":

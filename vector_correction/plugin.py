@@ -38,7 +38,11 @@ from qgis.gui import (
     QgisInterface
 )
 
-from vector_correction.core.gcp_manager import GcpManager
+from vector_correction.core.gcp_manager import (
+    GcpManager,
+    NotEnoughGcpsException,
+    TransformCreationException
+)
 from vector_correction.gui.draw_line_tool import DrawLineTool
 from vector_correction.gui.corrections_dock import CorrectionsDockWidget
 
@@ -203,14 +207,23 @@ class VectorCorrectionPlugin:
         }
 
         target_layer.beginEditCommand(self.tr('Correct features'))
-        transformed_features = self.gcp_manager.transform_features(
-            features=feature_map,
-            feature_crs=layer_crs,
-            extent=canvas_extent,
-            extent_crs=canvas_crs)
+
+        try:
+            transformed_features = self.gcp_manager.transform_features(
+                features=feature_map,
+                feature_crs=layer_crs,
+                extent=canvas_extent,
+                extent_crs=canvas_crs)
+        except NotEnoughGcpsException as e:
+            self.iface.messageBar().pushCritical('', str(e))
+            return
+        except TransformCreationException as e:
+            self.iface.messageBar().pushCritical('', str(e))
+            return
 
         if any(g.isNull() for g in transformed_features.values()):
-            assert False
+            self.iface.messageBar().pushCritical('', self.tr('One or more features failed to transform'))
+            return
 
         for _id, geometry in transformed_features.items():
             target_layer.changeGeometry(_id, geometry, True)

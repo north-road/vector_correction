@@ -56,6 +56,18 @@ class Gcp:
     crs: QgsCoordinateReferenceSystem
 
 
+class NotEnoughGcpsException(Exception):
+    """
+    Raised when not enough GCPs are defined for the selected transform method
+    """
+
+
+class TransformCreationException(Exception):
+    """
+    Raised when transform could not be created (eg due to colinear points)
+    """
+
+
 class GcpManager(QAbstractTableModel):
     """
     Manages a collection of GCPs
@@ -155,6 +167,13 @@ class GcpManager(QAbstractTableModel):
             settings.value('vector_corrections/method', 2, int, QgsSettings.Plugins)
         )
 
+        gcp_transformer = QgsGcpTransformerInterface.create(current_method)
+        if len(self.gcps) < gcp_transformer.minimumGcpCount():
+            raise NotEnoughGcpsException(
+                self.tr('{} requires at least {} points').format(
+                    QgsGcpTransformerInterface.methodToString(current_method),
+                    gcp_transformer.minimumGcpCount()))
+
         origin_points = []
         destination_points = []
 
@@ -163,9 +182,11 @@ class GcpManager(QAbstractTableModel):
             origin_points.append(ct.transform(gcp.origin))
             destination_points.append(ct.transform(gcp.destination))
 
-        return QgsGcpTransformerInterface.createFromParameters(current_method,
-                                                               origin_points,
-                                                               destination_points)
+        if not gcp_transformer.updateParametersFromGcps(origin_points,
+                                                        destination_points):
+            raise TransformCreationException(self.tr('Could not create transform from the defined GCPs'))
+
+        return gcp_transformer
 
     def transform_features(self,
                            features: Dict[int, QgsGeometry],
