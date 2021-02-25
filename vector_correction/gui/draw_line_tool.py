@@ -119,10 +119,5 @@ class DrawLineToolHandler(QgsAbstractMapToolHandler):
     Handler for the draw correction tool
     """
 
-    def __init__(self, tool, action):
-        super().__init__(tool, action)
-
-    def isCompatibleWithLayer(self, layer, context):
+    def isCompatibleWithLayer(self, layer, context):  # pylint: disable=unused-argument,missing-function-docstring
         return True
-
-

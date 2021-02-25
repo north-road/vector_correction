@@ -83,6 +83,7 @@ class VectorCorrectionPlugin:
         self.toolbar = None
         self.draw_correction_action = None
         self.map_tool = None
+        self.map_tool_handler = None
         self.temp_layer = None
         self.show_gcps_action = None
         self.apply_correction_action = None

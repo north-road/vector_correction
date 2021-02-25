@@ -22,7 +22,6 @@ from qgis.PyQt.QtCore import (
     QModelIndex,
     QObject
 )
-from qgis.PyQt.QtGui import QColor
 from qgis.analysis import (
     QgsGcpTransformerInterface,
     QgsGcpGeometryTransformer
@@ -34,7 +33,6 @@ from qgis.core import (
     QgsLineString,
     QgsRectangle,
     QgsWkbTypes,
-    QgsLineSymbol,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsProject
