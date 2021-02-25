@@ -37,7 +37,8 @@ from qgis.core import (
     QgsLineSymbol,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsProject
+    QgsProject,
+    QgsSettings
 )
 from qgis.gui import (
     QgsMapCanvas,
@@ -149,6 +150,10 @@ class GcpManager(QAbstractTableModel):
         """
         Creates a GCP transformer using the points added to this manager
         """
+        settings = QgsSettings()
+        current_method = QgsGcpTransformerInterface.TransformMethod(
+            settings.value('vector_corrections/method', 2, int, QgsSettings.Plugins)
+        )
 
         origin_points = []
         destination_points = []
@@ -158,9 +163,9 @@ class GcpManager(QAbstractTableModel):
             origin_points.append(ct.transform(gcp.origin))
             destination_points.append(ct.transform(gcp.destination))
 
-        return QgsGcpTransformerInterface.createFromParameters(
-            QgsGcpTransformerInterface.TransformMethod.PolynomialOrder1,
-            origin_points, destination_points)
+        return QgsGcpTransformerInterface.createFromParameters(current_method,
+                                                               origin_points,
+                                                               destination_points)
 
     def transform_features(self,
                            features: Dict[int, QgsGeometry],
