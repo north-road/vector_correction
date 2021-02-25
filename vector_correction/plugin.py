@@ -15,8 +15,11 @@ __revision__ = '$Format:%H$'
 
 import os
 
-from qgis.PyQt.QtCore import (QTranslator,
-                              QCoreApplication)
+from qgis.PyQt.QtCore import (
+    Qt,
+    QTranslator,
+    QCoreApplication
+)
 from qgis.PyQt.QtWidgets import (
     QToolBar,
     QAction
@@ -37,7 +40,7 @@ from qgis.gui import (
 
 from vector_correction.core.gcp_manager import GcpManager
 from vector_correction.gui.draw_line_tool import DrawLineTool
-from vector_correction.gui.table_view import PointListWidget
+from vector_correction.gui.corrections_dock import CorrectionsDockWidget
 
 VERSION = '0.0.1'
 
@@ -77,6 +80,7 @@ class VectorCorrectionPlugin:
         self.show_gcps_action = None
         self.apply_correction_action = None
         self.actions = []
+        self.dock = None
 
         self.gcp_manager = GcpManager(self.iface.mapCanvas())
 
@@ -102,6 +106,11 @@ class VectorCorrectionPlugin:
         """Creates application GUI widgets"""
         self.initProcessing()
 
+        self.dock = CorrectionsDockWidget(self.gcp_manager)
+
+        self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock)
+        self.dock.setUserVisible(False)
+
         self.toolbar = QToolBar(self.tr('Vector Correction Toolbar'))
         self.toolbar.setObjectName('vectorCorrectionToolbar')
         self.iface.addToolBar(self.toolbar)
@@ -113,8 +122,8 @@ class VectorCorrectionPlugin:
 
         self.show_gcps_action = QAction(self.tr('Show GCPS'), parent=self.toolbar)
         self.toolbar.addAction(self.show_gcps_action)
-        self.show_gcps_action.triggered.connect(self.show_gcps)
         self.actions.append(self.show_gcps_action)
+        self.dock.setToggleVisibilityAction(self.show_gcps_action)
 
         self.apply_correction_action = QAction(self.tr('Apply Correction'), parent=self.toolbar)
         self.toolbar.addAction(self.apply_correction_action)
@@ -138,6 +147,9 @@ class VectorCorrectionPlugin:
         if self.temp_layer is not None:
             self.temp_layer.deleteLater()
             self.temp_layer = None
+        if self.dock is not None:
+            self.dock.deleteLater()
+            self.dock = None
 
     def draw_correction(self):
         """
@@ -164,14 +176,6 @@ class VectorCorrectionPlugin:
         self.gcp_manager.add_gcp(origin=QgsPointXY(digitize_line.constGet().startPoint()),
                                  destination=QgsPointXY(digitize_line.constGet().endPoint()),
                                  crs=self.iface.mapCanvas().mapSettings().destinationCrs())
-
-    def show_gcps(self):
-        """
-        Shows the list of GCPs
-        """
-        w = PointListWidget(self.gcp_manager)
-        w.show()
-        assert False
 
     def apply_correction(self):
         """
