@@ -43,7 +43,10 @@ from vector_correction.core.gcp_manager import (
     NotEnoughGcpsException,
     TransformCreationException
 )
-from vector_correction.gui.draw_line_tool import DrawLineTool
+from vector_correction.gui.draw_line_tool import (
+    DrawLineTool,
+    DrawLineToolHandler
+)
 from vector_correction.gui.corrections_dock import CorrectionsDockWidget
 
 VERSION = '0.0.1'
@@ -121,7 +124,6 @@ class VectorCorrectionPlugin:
 
         self.draw_correction_action = QAction(self.tr('Draw Correction'), parent=self.toolbar)
         self.toolbar.addAction(self.draw_correction_action)
-        self.draw_correction_action.triggered.connect(self.draw_correction)
         self.actions.append(self.draw_correction_action)
 
         self.show_gcps_action = QAction(self.tr('Show GCPS'), parent=self.toolbar)
@@ -134,9 +136,27 @@ class VectorCorrectionPlugin:
         self.apply_correction_action.triggered.connect(self.apply_correction)
         self.actions.append(self.apply_correction_action)
 
+        self.map_tool = DrawLineTool(map_canvas=self.iface.mapCanvas(),
+                                     cad_dock_widget=self.iface.cadDockWidget(),
+                                     message_bar=self.iface.messageBar())
+        self.map_tool_handler = DrawLineToolHandler(self.map_tool, self.draw_correction_action)
+        self.iface.registerMapToolHandler(self.map_tool_handler)
+
+        layer_options = QgsVectorLayer.LayerOptions(QgsProject.instance().transformContext())
+        layer_options.skipCrsValidation = True
+        self.temp_layer = QgsVectorLayer('LineString', 'f', 'memory', layer_options)
+        self.temp_layer.setCrs(QgsCoordinateReferenceSystem())
+        self.temp_layer.startEditing()
+
+        self.map_tool.setLayer(self.temp_layer)
+
+        self.map_tool.digitizingCompleted.connect(self._correction_added)
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         self.gcp_manager.clear()
+
+        self.iface.unregisterMapToolHandler(self.map_tool_handler)
 
         for a in self.actions:
             a.deleteLater()
@@ -154,23 +174,6 @@ class VectorCorrectionPlugin:
         if self.dock is not None:
             self.dock.deleteLater()
             self.dock = None
-
-    def draw_correction(self):
-        """
-        Triggers the draw correction map tool
-        """
-
-        layer_options = QgsVectorLayer.LayerOptions(QgsProject.instance().transformContext())
-        layer_options.skipCrsValidation = True
-        self.temp_layer = QgsVectorLayer('LineString', 'f', 'memory', layer_options)
-        self.temp_layer.setCrs(QgsCoordinateReferenceSystem())
-        self.temp_layer.startEditing()
-        self.map_tool = DrawLineTool(map_canvas=self.iface.mapCanvas(),
-                                     cad_dock_widget=self.iface.cadDockWidget(),
-                                     message_bar=self.iface.messageBar())
-        self.map_tool.setLayer(self.temp_layer)
-        self.map_tool.digitizingCompleted.connect(self._correction_added)
-        self.iface.mapCanvas().setMapTool(self.map_tool)
 
     def _correction_added(self, feature: QgsFeature):
         """

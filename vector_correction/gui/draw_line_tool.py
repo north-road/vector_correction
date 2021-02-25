@@ -31,7 +31,8 @@ from qgis.gui import (
     QgsAdvancedDigitizingDockWidget,
     QgsMapMouseEvent,
     QgsRubberBand,
-    QgsMessageBar
+    QgsMessageBar,
+    QgsAbstractMapToolHandler
 )
 
 
@@ -111,3 +112,17 @@ class DrawLineTool(QgsMapToolDigitizeFeature):
                                                  Qgis.Warning, duration=QgsMessageBar.defaultMessageTimeout(Qgis.Info))
 
             super().cadCanvasReleaseEvent(e)
+
+
+class DrawLineToolHandler(QgsAbstractMapToolHandler):
+    """
+    Handler for the draw correction tool
+    """
+
+    def __init__(self, tool, action):
+        super().__init__(tool, action)
+
+    def isCompatibleWithLayer(self, layer, context):
+        return True
+
+

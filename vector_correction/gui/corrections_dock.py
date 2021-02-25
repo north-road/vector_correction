@@ -22,7 +22,9 @@ from qgis.PyQt.QtWidgets import (
 from qgis.analysis import (
     QgsGcpTransformerInterface
 )
-from qgis.core import QgsSettings
+from qgis.core import (
+    QgsSymbol
+)
 from qgis.gui import (
     QgsPanelWidget,
     QgsDockWidget,
@@ -30,6 +32,7 @@ from qgis.gui import (
 )
 
 from vector_correction.core.gcp_manager import GcpManager
+from vector_correction.core.settings_registry import SettingsRegistry
 from vector_correction.gui.gui_utils import GuiUtils
 
 WIDGET, _ = uic.loadUiType(GuiUtils.get_ui_file_path('point_list.ui'))
@@ -58,7 +61,7 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         """
         Shows the settings panel
         """
-        self.settings_panel = SettingsWidget()
+        self.settings_panel = SettingsWidget(self.gcp_manager)
         self.settings_panel.panelAccepted.connect(self._update_settings)
         self.openPanel(self.settings_panel)
 
@@ -79,8 +82,10 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
     A table for gcp lists
     """
 
-    def __init__(self, parent: QWidget = None):
+    def __init__(self, gcp_manager: GcpManager, parent: QWidget = None):
         super().__init__(parent)
+
+        self.gcp_manager = gcp_manager
 
         self.setupUi(self)
 
@@ -96,22 +101,37 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
                        ]:
             self.combo_method.addItem(QgsGcpTransformerInterface.methodToString(method), int(method))
 
+        self.arrow_style_button.setSymbolType(QgsSymbol.Line)
         self.restore_settings()
+
+        self.arrow_style_button.changed.connect(self._symbol_changed)
 
     def restore_settings(self):
         """
         Restores saved settings
         """
-        settings = QgsSettings()
-        current_method = settings.value('vector_corrections/method', 2, int, QgsSettings.Plugins)
-        self.combo_method.setCurrentIndex(self.combo_method.findData(current_method))
+        current_method = SettingsRegistry.transform_method()
+        self.combo_method.setCurrentIndex(self.combo_method.findData(int(current_method)))
+
+        self.arrow_style_button.setSymbol(SettingsRegistry.arrow_symbol())
 
     def save_settings(self):
         """
         Saves all configured settings
         """
-        settings = QgsSettings()
-        settings.setValue('vector_corrections/method', int(self.combo_method.currentData()), QgsSettings.Plugins)
+        SettingsRegistry.set_transform_method(
+            QgsGcpTransformerInterface.TransformMethod(
+                int(self.combo_method.currentData())
+            )
+        )
+        SettingsRegistry.set_arrow_symbol(self.arrow_style_button.symbol().clone())
+
+    def _symbol_changed(self):
+        """
+        Called when the line symbol type is changed
+        """
+        SettingsRegistry.set_arrow_symbol(self.arrow_style_button.symbol())
+        self.gcp_manager.update_line_symbols()
 
 
 class CorrectionsDockWidget(QgsDockWidget):

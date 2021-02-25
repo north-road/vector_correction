@@ -37,13 +37,14 @@ from qgis.core import (
     QgsLineSymbol,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsProject,
-    QgsSettings
+    QgsProject
 )
 from qgis.gui import (
     QgsMapCanvas,
     QgsRubberBand
 )
+
+from vector_correction.core.settings_registry import SettingsRegistry
 
 
 @dataclass
@@ -144,7 +145,6 @@ class GcpManager(QAbstractTableModel):
 
         rubber_band = self._create_rubber_band()
         rubber_band.setToGeometry(QgsGeometry(QgsLineString(QgsPoint(origin), QgsPoint(destination))), crs)
-        rubber_band.setStrokeColor(QColor(255, 0, 0))
 
         self.rubber_bands.append(rubber_band)
 
@@ -153,19 +153,22 @@ class GcpManager(QAbstractTableModel):
         Creates a new rubber band
         """
         rubber_band = QgsRubberBand(self.map_canvas, QgsWkbTypes.LineGeometry)
-        rubber_band.setSymbol(QgsLineSymbol.createSimple({'line_color': '#0000ff',
-                                                          'line_width': 1,
-                                                          'capstyle': 'round'}))
+        rubber_band.setSymbol(SettingsRegistry.arrow_symbol())
         return rubber_band
+
+    def update_line_symbols(self):
+        """
+        Updates all existing rubber bands to the current arrow symbol
+        """
+        for band in self.rubber_bands:
+            band.setSymbol(SettingsRegistry.arrow_symbol())
+            band.update()
 
     def to_gcp_transformer(self, destination_crs: QgsCoordinateReferenceSystem):
         """
         Creates a GCP transformer using the points added to this manager
         """
-        settings = QgsSettings()
-        current_method = QgsGcpTransformerInterface.TransformMethod(
-            settings.value('vector_corrections/method', 2, int, QgsSettings.Plugins)
-        )
+        current_method = SettingsRegistry.transform_method()
 
         gcp_transformer = QgsGcpTransformerInterface.create(current_method)
         if len(self.gcps) < gcp_transformer.minimumGcpCount():
