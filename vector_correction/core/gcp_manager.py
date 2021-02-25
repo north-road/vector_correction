@@ -170,7 +170,7 @@ class GcpManager(QAbstractTableModel):
         gcp_transformer = QgsGcpTransformerInterface.create(current_method)
         if len(self.gcps) < gcp_transformer.minimumGcpCount():
             raise NotEnoughGcpsException(
-                self.tr('{} requires at least {} points').format(
+                self.tr('{} transformation requires at least {} points').format(
                     QgsGcpTransformerInterface.methodToString(current_method),
                     gcp_transformer.minimumGcpCount()))
 

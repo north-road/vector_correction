@@ -183,9 +183,17 @@ class VectorCorrectionPlugin:
 
     def apply_correction(self):
         """
+        Applies the defined corrections to visible features in all editable layers
+        """
+        for _, layer in QgsProject.instance().mapLayers().items():
+            if isinstance(layer, QgsVectorLayer) and layer.isEditable():
+                if not self.apply_correction_to_layer(layer):
+                    break
+
+    def apply_correction_to_layer(self, target_layer: QgsVectorLayer):
+        """
         Applies the defined corrections to visible features
         """
-        target_layer = self.iface.activeLayer()
         layer_crs = target_layer.crs()
 
         canvas_extent = self.iface.mapCanvas().mapSettings().visibleExtent()
@@ -206,8 +214,6 @@ class VectorCorrectionPlugin:
             for f in features
         }
 
-        target_layer.beginEditCommand(self.tr('Correct features'))
-
         try:
             transformed_features = self.gcp_manager.transform_features(
                 features=feature_map,
@@ -216,17 +222,20 @@ class VectorCorrectionPlugin:
                 extent_crs=canvas_crs)
         except NotEnoughGcpsException as e:
             self.iface.messageBar().pushCritical('', str(e))
-            return
+            return False
         except TransformCreationException as e:
             self.iface.messageBar().pushCritical('', str(e))
-            return
+            return False
 
         if any(g.isNull() for g in transformed_features.values()):
             self.iface.messageBar().pushCritical('', self.tr('One or more features failed to transform'))
-            return
+            return False
+
+        target_layer.beginEditCommand(self.tr('Correct features'))
 
         for _id, geometry in transformed_features.items():
             target_layer.changeGeometry(_id, geometry, True)
 
         target_layer.endEditCommand()
         target_layer.triggerRepaint()
+        return True
