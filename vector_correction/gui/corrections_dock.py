@@ -69,7 +69,6 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         """
         Updates the stored settings
         """
-        self.settings_panel.save_settings()
         self.settings_panel.deleteLater()
         self.settings_panel = None
 
@@ -105,6 +104,7 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
         self.restore_settings()
 
         self.arrow_style_button.changed.connect(self._symbol_changed)
+        self.combo_method.currentIndexChanged[int].connect(self._method_changed)
 
     def restore_settings(self):
         """
@@ -115,23 +115,22 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
 
         self.arrow_style_button.setSymbol(SettingsRegistry.arrow_symbol())
 
-    def save_settings(self):
-        """
-        Saves all configured settings
-        """
-        SettingsRegistry.set_transform_method(
-            QgsGcpTransformerInterface.TransformMethod(
-                int(self.combo_method.currentData())
-            )
-        )
-        SettingsRegistry.set_arrow_symbol(self.arrow_style_button.symbol().clone())
-
     def _symbol_changed(self):
         """
         Called when the line symbol type is changed
         """
         SettingsRegistry.set_arrow_symbol(self.arrow_style_button.symbol())
         self.gcp_manager.update_line_symbols()
+
+    def _method_changed(self, _: int):
+        """
+        Called when the method combobox value is changed
+        """
+        SettingsRegistry.set_transform_method(
+            QgsGcpTransformerInterface.TransformMethod(
+                int(self.combo_method.currentData())
+            )
+        )
 
 
 class CorrectionsDockWidget(QgsDockWidget):
