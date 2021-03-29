@@ -13,6 +13,8 @@ __copyright__ = 'Copyright 2018, North Road'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
+import os
+
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -20,7 +22,8 @@ from qgis.PyQt.QtCore import (
     Qt,
     QAbstractTableModel,
     QModelIndex,
-    QObject
+    QObject,
+    QVariant
 )
 from qgis.PyQt.QtGui import (
     QColor
@@ -30,6 +33,7 @@ from qgis.analysis import (
     QgsGcpGeometryTransformer
 )
 from qgis.core import (
+    NULL,
     QgsPoint,
     QgsPointXY,
     QgsGeometry,
@@ -43,7 +47,12 @@ from qgis.core import (
     QgsMarkerLineSymbolLayer,
     QgsTemplatedLineSymbolLayerBase,
     QgsMarkerSymbol,
-    QgsFontMarkerSymbolLayer
+    QgsFontMarkerSymbolLayer,
+    QgsMemoryProviderUtils,
+    QgsField,
+    QgsFields,
+    QgsFeature,
+    QgsVectorFileWriter
 )
 from qgis.gui import (
     QgsMapCanvas,
@@ -275,7 +284,6 @@ class GcpManager(QAbstractTableModel):
                 gcp.residual = None
             return
 
-        residuals = []
         for gcp in self.gcps:
             ct = QgsCoordinateTransform(gcp.crs, destination_crs, QgsProject.instance().transformContext())
             src = ct.transform(gcp.origin)
@@ -332,3 +340,33 @@ class GcpManager(QAbstractTableModel):
             geometry.moveVertex(transformed_x, transformed_y, n)
 
         return geometry
+
+    def export_to_layer(self, path: str):
+        """
+        Exports the GCPs to a layer at the specified path
+        """
+        fields = QgsFields()
+        fields.append(QgsField('row', QVariant.Int))
+        fields.append(QgsField('source_x', QVariant.Double))
+        fields.append(QgsField('source_y', QVariant.Double))
+        fields.append(QgsField('dest_x', QVariant.Double))
+        fields.append(QgsField('dest_y', QVariant.Double))
+        fields.append(QgsField('residual', QVariant.Double))
+
+        layer = QgsMemoryProviderUtils.createMemoryLayer('temp', fields, QgsWkbTypes.LineString, self.gcps[0].crs)
+
+        for idx, gcp in enumerate(self.gcps):
+            ct = QgsCoordinateTransform(gcp.crs, layer.crs(), QgsProject.instance().transformContext())
+            src = ct.transform(gcp.origin)
+            dest = ct.transform(gcp.destination)
+
+            f = QgsFeature()
+            f.setAttributes([idx+1, gcp.origin.x(), gcp.origin.y(), gcp.destination.x(), gcp.destination.y(), gcp.residual if gcp.residual is not None else NULL])
+            f.setGeometry(QgsLineString(QgsPoint(src.x(), src.y()), QgsPoint(dest.x(), dest.y())))
+            layer.dataProvider().addFeature(f)
+
+        options = QgsVectorFileWriter.SaveVectorOptions()
+
+        options.driverName = QgsVectorFileWriter.driverForExtension(os.path.splitext(path)[1])
+        error_code, error, new_filename, new_layer = QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
+        return new_filename, new_layer, error

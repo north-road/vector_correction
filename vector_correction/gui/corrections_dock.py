@@ -14,17 +14,26 @@ __copyright__ = 'Copyright 2018, North Road'
 __revision__ = '$Format:%H$'
 
 from qgis.PyQt import uic
-from qgis.PyQt.QtCore import pyqtSignal
+from qgis.PyQt.QtCore import (
+    pyqtSignal,
+    QDir
+)
 from qgis.PyQt.QtWidgets import (
     QWidget,
     QVBoxLayout,
-    QAction
+    QAction,
+    QFileDialog
 )
 from qgis.analysis import (
     QgsGcpTransformerInterface
 )
 from qgis.core import (
-    QgsSymbol
+    QgsSymbol,
+    QgsVectorFileWriter,
+    QgsProviderRegistry,
+    QgsVectorLayer,
+    QgsProject,
+    QgsFileUtils
 )
 from qgis.gui import (
     QgsPanelWidget,
@@ -62,6 +71,10 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         self.settings_action = QAction(self.tr('Settings'), self)
         self.settings_action.triggered.connect(self._show_settings)
         self.toolbar.addAction(self.settings_action)
+
+        self.export_action = QAction(self.tr('Export'), self)
+        self.export_action.triggered.connect(self._export)
+        self.toolbar.addAction(self.export_action)
 
         self.settings_panel = None
 
@@ -107,6 +120,21 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         """
         self.gcp_manager.update_residuals()
 
+    def _export(self):
+        """
+        Exports GCP corrections to a line layer
+        """
+        filter = QgsVectorFileWriter.fileFilterString()
+        dest, selected_filter = QFileDialog.getSaveFileName(self, self.tr('Destination File'), QDir.homePath(), filter)
+        if not dest:
+            return
+        dest = QgsFileUtils.ensureFileNameHasExtension(dest, QgsFileUtils.extensionsFromFilter(selected_filter))
+
+        new_filename, new_layer, error = self.gcp_manager.export_to_layer(dest)
+        if not error:
+            source = QgsProviderRegistry.instance().encodeUri('ogr', {'path': new_filename, 'layerName': new_layer })
+            vl = QgsVectorLayer(source, self.tr('Corrections'))
+            QgsProject.instance().addMapLayer(vl)
 
 
 SETTINGS_WIDGET, _ = uic.loadUiType(GuiUtils.get_ui_file_path('settings.ui'))
