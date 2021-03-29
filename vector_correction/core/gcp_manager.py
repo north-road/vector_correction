@@ -117,13 +117,13 @@ class GcpManager(QAbstractTableModel):
             if index.column() == GcpManager.COLUMN_ID:
                 return index.row() + 1
             if index.column() == GcpManager.COLUMN_ORIGIN_X:
-                return self.gcps[index.row()].origin.x()
+                return "{:.2f}".format(self.gcps[index.row()].origin.x())
             if index.column() == GcpManager.COLUMN_ORIGIN_Y:
-                return self.gcps[index.row()].origin.y()
+                return "{:.2f}".format(self.gcps[index.row()].origin.y())
             if index.column() == GcpManager.COLUMN_DESTINATION_X:
-                return self.gcps[index.row()].destination.x()
+                return "{:.2f}".format(self.gcps[index.row()].destination.x())
             if index.column() == GcpManager.COLUMN_DESTINATION_Y:
-                return self.gcps[index.row()].destination.y()
+                return "{:.2f}".format(self.gcps[index.row()].destination.y())
 
         return None
 
