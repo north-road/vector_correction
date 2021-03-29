@@ -74,6 +74,7 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         self.settings_panel = SettingsWidget(self.gcp_manager)
         self.settings_panel.panelAccepted.connect(self._update_settings)
         self.settings_panel.extent_symbol_changed.connect(self.extent_symbol_changed)
+        self.settings_panel.transform_method_changed.connect(self._transform_method_changed)
         self.openPanel(self.settings_panel)
 
     def _update_settings(self):
@@ -100,6 +101,13 @@ class PointListWidget(QgsPanelWidget, WIDGET):
 
         self.gcp_manager.remove_rows(rows)
 
+    def _transform_method_changed(self):
+        """
+        Triggered when the selected transform method is changed
+        """
+        self.gcp_manager.update_residuals()
+
+
 
 SETTINGS_WIDGET, _ = uic.loadUiType(GuiUtils.get_ui_file_path('settings.ui'))
 
@@ -110,6 +118,7 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
     """
 
     extent_symbol_changed = pyqtSignal()
+    transform_method_changed = pyqtSignal()
 
     def __init__(self, gcp_manager: GcpManager, parent: QWidget = None):
         super().__init__(parent)
@@ -171,6 +180,7 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
                 int(self.combo_method.currentData())
             )
         )
+        self.transform_method_changed.emit()
 
 
 class CorrectionsDockWidget(QgsDockWidget):

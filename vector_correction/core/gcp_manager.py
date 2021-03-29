@@ -14,7 +14,7 @@ __copyright__ = 'Copyright 2018, North Road'
 __revision__ = '$Format:%H$'
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from qgis.PyQt.QtCore import (
     Qt,
@@ -61,6 +61,7 @@ class Gcp:
     origin: QgsPointXY
     destination: QgsPointXY
     crs: QgsCoordinateReferenceSystem
+    residual: float = None
 
 
 class NotEnoughGcpsException(Exception):
@@ -85,6 +86,7 @@ class GcpManager(QAbstractTableModel):
     COLUMN_ORIGIN_Y = 2
     COLUMN_DESTINATION_X = 3
     COLUMN_DESTINATION_Y = 4
+    COLUMN_RESIDUAL = 5
 
     gcps: List[Gcp]
     rubber_bands: List[QgsRubberBand]
@@ -105,7 +107,7 @@ class GcpManager(QAbstractTableModel):
                     parent: QModelIndex = QModelIndex()) -> int:
         if parent.isValid():
             return 0
-        return 5
+        return 6
 
     def data(self,  # pylint: disable=missing-function-docstring, too-many-return-statements
              index: QModelIndex,
@@ -124,22 +126,26 @@ class GcpManager(QAbstractTableModel):
                 return "{:.2f}".format(self.gcps[index.row()].destination.x())
             if index.column() == GcpManager.COLUMN_DESTINATION_Y:
                 return "{:.2f}".format(self.gcps[index.row()].destination.y())
+            if index.column() == GcpManager.COLUMN_RESIDUAL:
+                return "{:.2f}".format(self.gcps[index.row()].residual) if self.gcps[index.row()].residual is not None else None
 
         return None
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int):
         if orientation == Qt.Horizontal:
             if role in (Qt.DisplayRole, Qt.ToolTipRole):
-                if section == 0:
+                if section == GcpManager.COLUMN_ID:
                     return self.tr('Row')
-                elif section == 1:
+                if section == GcpManager.COLUMN_ORIGIN_X:
                     return self.tr('Source X')
-                elif section == 2:
+                if section == GcpManager.COLUMN_ORIGIN_Y:
                     return self.tr('Source Y')
-                elif section == 3:
+                if section == GcpManager.COLUMN_DESTINATION_X:
                     return self.tr('Dest X')
-                elif section == 4:
+                if section == GcpManager.COLUMN_DESTINATION_Y:
                     return self.tr('Dest Y')
+                if section == GcpManager.COLUMN_RESIDUAL:
+                    return self.tr('Residual')
         return None
 
     def clear(self):
@@ -168,6 +174,7 @@ class GcpManager(QAbstractTableModel):
             del self.gcps[r]
             self.endRemoveRows()
 
+        self.update_residuals()
         self.update_line_symbols()
 
     def add_gcp(self, origin: QgsPointXY, destination: QgsPointXY, crs: QgsCoordinateReferenceSystem):
@@ -176,6 +183,7 @@ class GcpManager(QAbstractTableModel):
         """
         self.beginInsertRows(QModelIndex(), len(self.gcps), len(self.gcps))
         self.gcps.append(Gcp(origin=origin, destination=destination, crs=crs))
+        self.update_residuals()
         self.endInsertRows()
 
         rubber_band = self._create_rubber_band(len(self.gcps))
@@ -195,7 +203,7 @@ class GcpManager(QAbstractTableModel):
         label_marker_sub_symbol = QgsMarkerSymbol()
         font_marker = QgsFontMarkerSymbolLayer('Arial', str(row_number), 5)
         font_marker.setFontStyle('Bold')
-        font_marker.setColor(QColor(0,0,0))
+        font_marker.setColor(QColor(0, 0, 0))
         font_marker.setStrokeColor(QColor(255, 255, 255))
         font_marker.setStrokeWidth(0.3)
         label_marker_sub_symbol.changeSymbolLayer(0, font_marker)
@@ -246,6 +254,37 @@ class GcpManager(QAbstractTableModel):
             raise TransformCreationException(self.tr('Could not create transform from the defined GCPs'))
 
         return gcp_transformer
+
+    def update_residuals(self):
+        """
+        Calculates the residuals for all registered GCPs
+        """
+        if not self.gcps:
+            return
+
+        destination_crs = self.gcps[0].crs
+        try:
+            transformer = self.to_gcp_transformer(destination_crs)
+        except NotEnoughGcpsException:
+            transformer = None
+        except TransformCreationException:
+            transformer = None
+
+        if not transformer:
+            for gcp in self.gcps:
+                gcp.residual = None
+            return
+
+        residuals = []
+        for gcp in self.gcps:
+            ct = QgsCoordinateTransform(gcp.crs, destination_crs, QgsProject.instance().transformContext())
+            src = ct.transform(gcp.origin)
+            ok, x, y = transformer.transform(src.x(), src.y())
+            if ok:
+                dst = ct.transform(gcp.destination)
+                gcp.residual = dst.distance(x, y)
+            else:
+                gcp.residual = None
 
     def transform_features(self,
                            features: Dict[int, QgsGeometry],
