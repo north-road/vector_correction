@@ -33,7 +33,8 @@ from qgis.core import (
     QgsProviderRegistry,
     QgsVectorLayer,
     QgsProject,
-    QgsFileUtils
+    QgsFileUtils,
+    QgsApplication
 )
 from qgis.gui import (
     QgsPanelWidget,
@@ -64,17 +65,37 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         self.table_view.setModel(self.gcp_manager)
 
         self.delete_rows_action = QAction(self.tr('Delete Selected Rows'), self)
+        self.delete_rows_action.setIcon(QgsApplication.getThemeIcon('mActionDeleteSelectedFeatures.svg'))
         self.delete_rows_action.triggered.connect(self._delete_selected)
         self.toolbar.addAction(self.delete_rows_action)
         self.delete_rows_action.setEnabled(False)
 
-        self.settings_action = QAction(self.tr('Settings'), self)
-        self.settings_action.triggered.connect(self._show_settings)
-        self.toolbar.addAction(self.settings_action)
+        self.toolbar.addSeparator()
+
+        self.save_action = QAction(self.tr('Save'), self)
+        self.save_action.setToolTip(self.tr('Save GCPs to file'))
+        self.save_action.setIcon(QgsApplication.getThemeIcon('mActionFileSave.svg'))
+        self.save_action.triggered.connect(self._save)
+        self.toolbar.addAction(self.save_action)
+
+        self.load_action = QAction(self.tr('Load'), self)
+        self.load_action.setToolTip(self.tr('Loads GCPs from file'))
+        self.load_action.setIcon(QgsApplication.getThemeIcon('mActionFileOpen.svg'))
+        self.load_action.triggered.connect(self._load)
+        self.toolbar.addAction(self.load_action)
 
         self.export_action = QAction(self.tr('Export'), self)
+        self.export_action.setToolTip(self.tr('Exports correction vectors to a line layer'))
+        self.export_action.setIcon(QgsApplication.getThemeIcon('mIconLineLayer.svg'))
         self.export_action.triggered.connect(self._export)
         self.toolbar.addAction(self.export_action)
+
+        self.toolbar.addSeparator()
+
+        self.settings_action = QAction(self.tr('Settings'), self)
+        self.settings_action.setIcon(QgsApplication.getThemeIcon('/propertyicons/settings.svg'))
+        self.settings_action.triggered.connect(self._show_settings)
+        self.toolbar.addAction(self.settings_action)
 
         self.settings_panel = None
 
@@ -135,6 +156,16 @@ class PointListWidget(QgsPanelWidget, WIDGET):
             source = QgsProviderRegistry.instance().encodeUri('ogr', {'path': new_filename, 'layerName': new_layer })
             vl = QgsVectorLayer(source, self.tr('Corrections'))
             QgsProject.instance().addMapLayer(vl)
+
+    def _save(self):
+        """
+        Saves GCPs to disk
+        """
+
+    def _load(self):
+        """
+        Loads GCPs from disk
+        """
 
 
 SETTINGS_WIDGET, _ = uic.loadUiType(GuiUtils.get_ui_file_path('settings.ui'))
