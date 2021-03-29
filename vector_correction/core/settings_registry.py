@@ -22,7 +22,13 @@ from qgis.core import (
     QgsSimpleLineSymbolLayer,
     QgsMarkerLineSymbolLayer,
     QgsEllipseSymbolLayer,
-    QgsMarkerSymbol
+    QgsMarkerSymbol,
+    QgsSymbolLayerUtils,
+    QgsReadWriteContext
+)
+
+from qgis.PyQt.QtXml import (
+    QDomDocument
 )
 
 
@@ -104,7 +110,15 @@ class SettingsRegistry:
         if SettingsRegistry.ARROW_SYMBOL is not None:
             return SettingsRegistry.ARROW_SYMBOL.clone()
 
-        SettingsRegistry.ARROW_SYMBOL = SettingsRegistry.default_arrow_symbol()
+        settings = QgsSettings()
+        symbol_doc = settings.value('vector_corrections/arrow_symbol', '', str, QgsSettings.Plugins)
+        if not symbol_doc:
+            SettingsRegistry.ARROW_SYMBOL = SettingsRegistry.default_arrow_symbol()
+        else:
+            doc = QDomDocument()
+            doc.setContent(symbol_doc)
+            SettingsRegistry.ARROW_SYMBOL =  QgsSymbolLayerUtils.loadSymbol(doc.documentElement(), QgsReadWriteContext())
+
         return SettingsRegistry.ARROW_SYMBOL.clone()
 
     @staticmethod
@@ -113,6 +127,13 @@ class SettingsRegistry:
         Sets the arrow symbol to use for lines
         """
         SettingsRegistry.ARROW_SYMBOL = symbol.clone()
+
+        doc = QDomDocument()
+        elem = QgsSymbolLayerUtils.saveSymbol('arrow', symbol, doc, QgsReadWriteContext())
+        doc.appendChild(elem)
+
+        settings = QgsSettings()
+        settings.setValue('vector_corrections/arrow_symbol', doc.toString(), QgsSettings.Plugins)
 
 
 SETTINGS_REGISTRY = SettingsRegistry()
