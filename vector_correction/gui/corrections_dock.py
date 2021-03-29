@@ -54,11 +54,18 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         self.gcp_manager = gcp_manager
         self.table_view.setModel(self.gcp_manager)
 
+        self.delete_rows_action = QAction(self.tr('Delete Selected Rows'), self)
+        self.delete_rows_action.triggered.connect(self._delete_selected)
+        self.toolbar.addAction(self.delete_rows_action)
+        self.delete_rows_action.setEnabled(False)
+
         self.settings_action = QAction(self.tr('Settings'), self)
         self.settings_action.triggered.connect(self._show_settings)
         self.toolbar.addAction(self.settings_action)
 
         self.settings_panel = None
+
+        self.table_view.selectionModel().selectionChanged.connect(self._selection_changed)
 
     def _show_settings(self):
         """
@@ -75,6 +82,23 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         """
         self.settings_panel.deleteLater()
         self.settings_panel = None
+
+    def _selection_changed(self):
+        """
+        Triggered when table selection is changed
+        """
+        self.delete_rows_action.setEnabled(bool(self.table_view.selectionModel().selectedIndexes()))
+
+    def _delete_selected(self):
+        """
+        Deletes selected rows from the table
+        """
+        rows = []
+        for index in self.table_view.selectionModel().selectedIndexes():
+            if index.row() not in rows:
+                rows.append(index.row())
+
+        self.gcp_manager.remove_rows(rows)
 
 
 SETTINGS_WIDGET, _ = uic.loadUiType(GuiUtils.get_ui_file_path('settings.ui'))

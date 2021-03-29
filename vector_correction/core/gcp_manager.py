@@ -141,6 +141,20 @@ class GcpManager(QAbstractTableModel):
         self.gcps = []
         self.endRemoveRows()
 
+    def remove_rows(self, rows: List[int]):
+        """
+        Removes a list of rows from the manager
+        """
+        rows.sort(reverse=True)
+        for r in rows:
+            self.beginRemoveRows(QModelIndex(), r, r)
+            self.map_canvas.scene().removeItem(self.rubber_bands[r])
+            del self.rubber_bands[r]
+            del self.gcps[r]
+            self.endRemoveRows()
+
+        self.update_line_symbols()
+
     def add_gcp(self, origin: QgsPointXY, destination: QgsPointXY, crs: QgsCoordinateReferenceSystem):
         """
         Adds a GCP
