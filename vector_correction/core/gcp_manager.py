@@ -22,6 +22,9 @@ from qgis.PyQt.QtCore import (
     QModelIndex,
     QObject
 )
+from qgis.PyQt.QtGui import (
+    QColor
+)
 from qgis.analysis import (
     QgsGcpTransformerInterface,
     QgsGcpGeometryTransformer
@@ -31,11 +34,16 @@ from qgis.core import (
     QgsPointXY,
     QgsGeometry,
     QgsLineString,
+    QgsLineSymbol,
     QgsRectangle,
     QgsWkbTypes,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsProject
+    QgsProject,
+    QgsMarkerLineSymbolLayer,
+    QgsTemplatedLineSymbolLayerBase,
+    QgsMarkerSymbol,
+    QgsFontMarkerSymbolLayer
 )
 from qgis.gui import (
     QgsMapCanvas,
@@ -141,25 +149,46 @@ class GcpManager(QAbstractTableModel):
         self.gcps.append(Gcp(origin=origin, destination=destination, crs=crs))
         self.endInsertRows()
 
-        rubber_band = self._create_rubber_band()
+        rubber_band = self._create_rubber_band(len(self.gcps))
         rubber_band.setToGeometry(QgsGeometry(QgsLineString(QgsPoint(origin), QgsPoint(destination))), crs)
 
         self.rubber_bands.append(rubber_band)
 
-    def _create_rubber_band(self) -> QgsRubberBand:
+    def _rubber_band_symbol_for_row(self, row_number: int) -> QgsLineSymbol:
+        """
+        Creates the line symbol for the specified row
+        """
+        symbol = SettingsRegistry.arrow_symbol()
+
+        label_marker = QgsMarkerLineSymbolLayer(False)
+        label_marker.setPlacement(QgsTemplatedLineSymbolLayerBase.FirstVertex)
+
+        label_marker_sub_symbol = QgsMarkerSymbol()
+        font_marker = QgsFontMarkerSymbolLayer('Arial', str(row_number), 5)
+        font_marker.setFontStyle('Bold')
+        font_marker.setColor(QColor(0,0,0))
+        font_marker.setStrokeColor(QColor(255, 255, 255))
+        font_marker.setStrokeWidth(0.3)
+        label_marker_sub_symbol.changeSymbolLayer(0, font_marker)
+        label_marker.setSubSymbol(label_marker_sub_symbol)
+        symbol.appendSymbolLayer(label_marker)
+
+        return symbol
+
+    def _create_rubber_band(self, row_number: int) -> QgsRubberBand:
         """
         Creates a new rubber band
         """
         rubber_band = QgsRubberBand(self.map_canvas, QgsWkbTypes.LineGeometry)
-        rubber_band.setSymbol(SettingsRegistry.arrow_symbol())
+        rubber_band.setSymbol(self._rubber_band_symbol_for_row(row_number))
         return rubber_band
 
     def update_line_symbols(self):
         """
         Updates all existing rubber bands to the current arrow symbol
         """
-        for band in self.rubber_bands:
-            band.setSymbol(SettingsRegistry.arrow_symbol())
+        for row_number, band in enumerate(self.rubber_bands):
+            band.setSymbol(self._rubber_band_symbol_for_row(row_number + 1))
             band.update()
 
     def to_gcp_transformer(self, destination_crs: QgsCoordinateReferenceSystem):
