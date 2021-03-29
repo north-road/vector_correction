@@ -163,6 +163,7 @@ class VectorCorrectionPlugin:
         self.toolbar.addAction(self.apply_correction_action)
         self.apply_correction_action.triggered.connect(self.apply_correction)
         self.actions.append(self.apply_correction_action)
+        self.apply_correction_action.setEnabled(False)
 
         self.map_tool = DrawLineTool(map_canvas=self.iface.mapCanvas(),
                                      cad_dock_widget=self.iface.cadDockWidget(),
@@ -280,6 +281,7 @@ class VectorCorrectionPlugin:
         :param aoi: area of interest
         """
         self.show_aoi_action.setEnabled(True)
+        self.apply_correction_action.setEnabled(True)
         self.gcp_manager.set_aoi(aoi)
 
         self.show_aoi_action.setChecked(True)
