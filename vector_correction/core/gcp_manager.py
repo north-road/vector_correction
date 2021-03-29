@@ -127,6 +127,21 @@ class GcpManager(QAbstractTableModel):
 
         return None
 
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int):
+        if orientation == Qt.Horizontal:
+            if role in (Qt.DisplayRole, Qt.ToolTipRole):
+                if section == 0:
+                    return self.tr('Row')
+                elif section == 1:
+                    return self.tr('Source X')
+                elif section == 2:
+                    return self.tr('Source Y')
+                elif section == 3:
+                    return self.tr('Dest X')
+                elif section == 4:
+                    return self.tr('Dest Y')
+        return None
+
     def clear(self):
         """
         Clears the GCP manager
