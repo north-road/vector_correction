@@ -227,12 +227,12 @@ class VectorCorrectionPlugin:
                 if not self.apply_correction_to_layer(layer):
                     break
 
-    def apply_correction_to_layer(self, target_layer: QgsVectorLayer):
+    def apply_correction_to_layer(self, target_layer: QgsVectorLayer) -> bool:
         """
         Applies the defined corrections to visible features
         """
         if not self.aoi:
-            return
+            return False
 
         layer_crs = target_layer.crs()
 
