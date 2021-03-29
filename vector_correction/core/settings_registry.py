@@ -13,6 +13,9 @@ __copyright__ = 'Copyright 2020, North Road'
 # This will get replaced with a git SHA1 when you do a git archive
 __revision__ = '$Format:%H$'
 
+from qgis.PyQt.QtXml import (
+    QDomDocument
+)
 from qgis.analysis import (
     QgsGcpTransformerInterface
 )
@@ -24,11 +27,9 @@ from qgis.core import (
     QgsEllipseSymbolLayer,
     QgsMarkerSymbol,
     QgsSymbolLayerUtils,
-    QgsReadWriteContext
-)
-
-from qgis.PyQt.QtXml import (
-    QDomDocument
+    QgsReadWriteContext,
+    QgsFillSymbol,
+    QgsSimpleFillSymbolLayer
 )
 
 
@@ -38,6 +39,7 @@ class SettingsRegistry:
     """
 
     ARROW_SYMBOL = None
+    EXTENT_SYMBOL = None
 
     @staticmethod
     def transform_method() -> QgsGcpTransformerInterface.TransformMethod:
@@ -117,7 +119,7 @@ class SettingsRegistry:
         else:
             doc = QDomDocument()
             doc.setContent(symbol_doc)
-            SettingsRegistry.ARROW_SYMBOL =  QgsSymbolLayerUtils.loadSymbol(doc.documentElement(), QgsReadWriteContext())
+            SettingsRegistry.ARROW_SYMBOL = QgsSymbolLayerUtils.loadSymbol(doc.documentElement(), QgsReadWriteContext())
 
         return SettingsRegistry.ARROW_SYMBOL.clone()
 
@@ -134,6 +136,59 @@ class SettingsRegistry:
 
         settings = QgsSettings()
         settings.setValue('vector_corrections/arrow_symbol', doc.toString(), QgsSettings.Plugins)
+
+    @staticmethod
+    def default_extent_symbol() -> QgsFillSymbol:
+        """
+        Returns the default fill symbol to use for shading AOIs
+        """
+        symbol = QgsFillSymbol([])
+        simple_fill = QgsSimpleFillSymbolLayer.create(
+            {'color': '195,202,4,112',
+             'joinstyle': 'bevel',
+             'outline_color': '195,202,4,114',
+             'outline_style': 'solid',
+             'outline_width': '0.46',
+             'outline_width_unit': 'MM',
+             'style': 'dense7'}
+        )
+        symbol.changeSymbolLayer(0, simple_fill)
+
+        return symbol
+
+    @staticmethod
+    def extent_symbol() -> QgsFillSymbol:
+        """
+        Returns the fill symbol to use for extents
+        """
+        if SettingsRegistry.EXTENT_SYMBOL is not None:
+            return SettingsRegistry.EXTENT_SYMBOL.clone()
+
+        settings = QgsSettings()
+        symbol_doc = settings.value('vector_corrections/extent_symbol', '', str, QgsSettings.Plugins)
+        if not symbol_doc:
+            SettingsRegistry.EXTENT_SYMBOL = SettingsRegistry.default_extent_symbol()
+        else:
+            doc = QDomDocument()
+            doc.setContent(symbol_doc)
+            SettingsRegistry.EXTENT_SYMBOL = QgsSymbolLayerUtils.loadSymbol(doc.documentElement(),
+                                                                            QgsReadWriteContext())
+
+        return SettingsRegistry.EXTENT_SYMBOL.clone()
+
+    @staticmethod
+    def set_extent_symbol(symbol: QgsFillSymbol):
+        """
+        Sets the fill symbol to use for extents
+        """
+        SettingsRegistry.EXTENT_SYMBOL = symbol.clone()
+
+        doc = QDomDocument()
+        elem = QgsSymbolLayerUtils.saveSymbol('extent', symbol, doc, QgsReadWriteContext())
+        doc.appendChild(elem)
+
+        settings = QgsSettings()
+        settings.setValue('vector_corrections/extent_symbol', doc.toString(), QgsSettings.Plugins)
 
 
 SETTINGS_REGISTRY = SettingsRegistry()

@@ -14,7 +14,7 @@ __copyright__ = 'Copyright 2018, North Road'
 __revision__ = '$Format:%H$'
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from qgis.PyQt.QtCore import (
     Qt,
@@ -35,7 +35,8 @@ from qgis.core import (
     QgsWkbTypes,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsProject
+    QgsProject,
+    QgsReferencedRectangle
 )
 from qgis.gui import (
     QgsMapCanvas,
@@ -86,6 +87,7 @@ class GcpManager(QAbstractTableModel):
         self.map_canvas = map_canvas
         self.gcps = []
         self.rubber_bands = []
+        self.aoi: Optional[QgsReferencedRectangle] = None
 
     def rowCount(self,  # pylint: disable=missing-function-docstring
                  parent: QModelIndex = QModelIndex()) -> int:
@@ -235,3 +237,9 @@ class GcpManager(QAbstractTableModel):
             geometry.moveVertex(transformed_x, transformed_y, n)
 
         return geometry
+
+    def set_aoi(self, aoi: QgsReferencedRectangle):
+        """
+        Sets the current aoi to apply transformations to
+        """
+        self.aoi = aoi

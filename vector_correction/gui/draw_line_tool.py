@@ -121,3 +121,4 @@ class DrawLineToolHandler(QgsAbstractMapToolHandler):
 
     def isCompatibleWithLayer(self, layer, context):  # pylint: disable=unused-argument,missing-function-docstring
         return True
+

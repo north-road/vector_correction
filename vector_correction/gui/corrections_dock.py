@@ -14,6 +14,7 @@ __copyright__ = 'Copyright 2018, North Road'
 __revision__ = '$Format:%H$'
 
 from qgis.PyQt import uic
+from qgis.PyQt.QtCore import pyqtSignal
 from qgis.PyQt.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -43,6 +44,8 @@ class PointListWidget(QgsPanelWidget, WIDGET):
     A table for gcp lists
     """
 
+    extent_symbol_changed = pyqtSignal()
+
     def __init__(self, gcp_manager: GcpManager, parent: QWidget = None):
         super().__init__(parent)
 
@@ -63,6 +66,7 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         """
         self.settings_panel = SettingsWidget(self.gcp_manager)
         self.settings_panel.panelAccepted.connect(self._update_settings)
+        self.settings_panel.extent_symbol_changed.connect(self.extent_symbol_changed)
         self.openPanel(self.settings_panel)
 
     def _update_settings(self):
@@ -80,6 +84,8 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
     """
     A table for gcp lists
     """
+
+    extent_symbol_changed = pyqtSignal()
 
     def __init__(self, gcp_manager: GcpManager, parent: QWidget = None):
         super().__init__(parent)
@@ -101,9 +107,11 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
             self.combo_method.addItem(QgsGcpTransformerInterface.methodToString(method), int(method))
 
         self.arrow_style_button.setSymbolType(QgsSymbol.Line)
+        self.extent_style_button.setSymbolType(QgsSymbol.Fill)
         self.restore_settings()
 
         self.arrow_style_button.changed.connect(self._symbol_changed)
+        self.extent_style_button.changed.connect(self._extent_symbol_changed)
         self.combo_method.currentIndexChanged[int].connect(self._method_changed)
 
     def restore_settings(self):
@@ -114,6 +122,7 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
         self.combo_method.setCurrentIndex(self.combo_method.findData(int(current_method)))
 
         self.arrow_style_button.setSymbol(SettingsRegistry.arrow_symbol())
+        self.extent_style_button.setSymbol(SettingsRegistry.extent_symbol())
 
     def _symbol_changed(self):
         """
@@ -121,6 +130,13 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
         """
         SettingsRegistry.set_arrow_symbol(self.arrow_style_button.symbol())
         self.gcp_manager.update_line_symbols()
+
+    def _extent_symbol_changed(self):
+        """
+        Called when the extent symbol type is changed
+        """
+        SettingsRegistry.set_extent_symbol(self.extent_style_button.symbol())
+        self.extent_symbol_changed.emit()
 
     def _method_changed(self, _: int):
         """
@@ -137,6 +153,8 @@ class CorrectionsDockWidget(QgsDockWidget):
     """
     A dock widget container for plugin GUI components
     """
+
+    extent_symbol_changed = pyqtSignal()
 
     def __init__(self, gcp_manager: GcpManager, parent=None):
         super().__init__(parent)
@@ -160,3 +178,4 @@ class CorrectionsDockWidget(QgsDockWidget):
         self.table_widget = PointListWidget(self.gcp_manager)
         self.table_widget.setDockMode(True)
         self.stack.setMainPanel(self.table_widget)
+        self.table_widget.extent_symbol_changed.connect(self.extent_symbol_changed)

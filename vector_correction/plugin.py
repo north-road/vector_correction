@@ -32,7 +32,8 @@ from qgis.core import (
     QgsFeature,
     QgsPointXY,
     QgsFeatureRequest,
-    QgsCoordinateTransform
+    QgsCoordinateTransform,
+    QgsReferencedRectangle
 )
 from qgis.gui import (
     QgisInterface
@@ -46,6 +47,10 @@ from vector_correction.core.gcp_manager import (
 from vector_correction.gui.draw_line_tool import (
     DrawLineTool,
     DrawLineToolHandler
+)
+from vector_correction.gui.draw_extent_tool import (
+    DrawExtentTool,
+    DrawExtentToolHandler
 )
 from vector_correction.gui.corrections_dock import CorrectionsDockWidget
 
@@ -82,9 +87,13 @@ class VectorCorrectionPlugin:
 
         self.toolbar = None
         self.draw_correction_action = None
+        self.aoi_tool = None
+        self.aoi_tool_handler = None
         self.map_tool = None
         self.map_tool_handler = None
         self.temp_layer = None
+        self.draw_aoi_action = None
+        self.show_aoi_action = None
         self.show_gcps_action = None
         self.apply_correction_action = None
         self.actions = []
@@ -123,6 +132,24 @@ class VectorCorrectionPlugin:
         self.toolbar.setObjectName('vectorCorrectionToolbar')
         self.iface.addToolBar(self.toolbar)
 
+        self.draw_aoi_action = QAction(self.tr('Draw AOI'), parent=self.toolbar)
+        self.toolbar.addAction(self.draw_aoi_action)
+        self.actions.append(self.draw_aoi_action)
+
+        self.show_aoi_action = QAction(self.tr('Show AOI'), parent=self.toolbar)
+        self.show_aoi_action.setCheckable(True)
+        self.show_aoi_action.setChecked(False)
+        self.show_aoi_action.setEnabled(False)
+        self.toolbar.addAction(self.show_aoi_action)
+        self.show_aoi_action.toggled.connect(self.show_aoi)
+        self.actions.append(self.show_aoi_action)
+
+        self.aoi_tool = DrawExtentTool(map_canvas=self.iface.mapCanvas(),
+                                     message_bar=self.iface.messageBar())
+        self.aoi_tool_handler = DrawExtentToolHandler(self.aoi_tool, self.draw_aoi_action)
+        self.iface.registerMapToolHandler(self.aoi_tool_handler)
+        self.aoi_tool.extent_set.connect(self.set_aoi)
+
         self.draw_correction_action = QAction(self.tr('Draw Correction'), parent=self.toolbar)
         self.toolbar.addAction(self.draw_correction_action)
         self.actions.append(self.draw_correction_action)
@@ -153,10 +180,13 @@ class VectorCorrectionPlugin:
 
         self.map_tool.digitizingCompleted.connect(self._correction_added)
 
+        self.dock.extent_symbol_changed.connect(self.aoi_tool.update_fill_symbol)
+
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         self.gcp_manager.clear()
 
+        self.iface.unregisterMapToolHandler(self.aoi_tool_handler)
         self.iface.unregisterMapToolHandler(self.map_tool_handler)
 
         for a in self.actions:
@@ -243,3 +273,20 @@ class VectorCorrectionPlugin:
         target_layer.endEditCommand()
         target_layer.triggerRepaint()
         return True
+
+    def set_aoi(self, aoi: QgsReferencedRectangle):
+        """
+        Sets the current area of interest
+        :param aoi: area of interest
+        """
+        self.show_aoi_action.setEnabled(True)
+        self.gcp_manager.set_aoi(aoi)
+
+        self.show_aoi_action.setChecked(True)
+
+    def show_aoi(self, visible: bool):
+        """
+        Shows (or hides) the current area of interest
+        """
+        self.aoi_tool.show_aoi(visible)
+
