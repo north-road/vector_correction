@@ -14,9 +14,8 @@ __copyright__ = 'Copyright 2018, North Road'
 __revision__ = '$Format:%H$'
 
 import os
-
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from qgis.PyQt.QtCore import (
     Qt,
@@ -71,6 +70,25 @@ class Gcp:
     destination: QgsPointXY
     crs: QgsCoordinateReferenceSystem
     residual: float = None
+
+    def to_string(self):
+        """
+        Converts the GCP to a string
+        """
+        return f'{self.origin.x()},{self.origin.y()},{self.destination.x()},{self.destination.y()},{self.crs.authid()}'
+
+    @staticmethod
+    def from_string(string):
+        """
+        Creates a GCP from a string
+        """
+        parts = string.split(',')
+        if len(parts) != 5:
+            return None
+
+        return Gcp(QgsPointXY(float(parts[0]), float(parts[1])),
+                   QgsPointXY(float(parts[2]), float(parts[3])),
+                   QgsCoordinateReferenceSystem(parts[4]))
 
 
 class NotEnoughGcpsException(Exception):
@@ -136,7 +154,8 @@ class GcpManager(QAbstractTableModel):
             if index.column() == GcpManager.COLUMN_DESTINATION_Y:
                 return "{:.2f}".format(self.gcps[index.row()].destination.y())
             if index.column() == GcpManager.COLUMN_RESIDUAL:
-                return "{:.2f}".format(self.gcps[index.row()].residual) if self.gcps[index.row()].residual is not None else None
+                return "{:.2f}".format(self.gcps[index.row()].residual) if self.gcps[
+                                                                               index.row()].residual is not None else None
 
         return None
 
@@ -361,12 +380,33 @@ class GcpManager(QAbstractTableModel):
             dest = ct.transform(gcp.destination)
 
             f = QgsFeature()
-            f.setAttributes([idx+1, gcp.origin.x(), gcp.origin.y(), gcp.destination.x(), gcp.destination.y(), gcp.residual if gcp.residual is not None else NULL])
+            f.setAttributes([idx + 1, gcp.origin.x(), gcp.origin.y(), gcp.destination.x(), gcp.destination.y(),
+                             gcp.residual if gcp.residual is not None else NULL])
             f.setGeometry(QgsLineString(QgsPoint(src.x(), src.y()), QgsPoint(dest.x(), dest.y())))
             layer.dataProvider().addFeature(f)
 
         options = QgsVectorFileWriter.SaveVectorOptions()
 
         options.driverName = QgsVectorFileWriter.driverForExtension(os.path.splitext(path)[1])
-        error_code, error, new_filename, new_layer = QgsVectorFileWriter.writeAsVectorFormatV3(layer, path, QgsProject.instance().transformContext(), options)
+        error_code, error, new_filename, new_layer = QgsVectorFileWriter.writeAsVectorFormatV3(layer, path,
+                                                                                               QgsProject.instance().transformContext(),
+                                                                                               options)
         return new_filename, new_layer, error
+
+    def save_to_file(self, path: str):
+        """
+        Saves the GCPs to a file
+        """
+        with open(path, 'wt') as f:
+            for gcp in self.gcps:
+                f.write(gcp.to_string() + '\n')
+
+    def load_from_file(self, path: str):
+        """
+        Loads GCPs from a file
+        """
+        with open(path, 'rt') as f:
+            for line in f.readlines():
+                gcp = Gcp.from_string(line)
+                if gcp is not None:
+                    self.add_gcp(gcp.origin, gcp.destination, gcp.crs)

@@ -161,11 +161,23 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         """
         Saves GCPs to disk
         """
+        dest, _ = QFileDialog.getSaveFileName(self, self.tr('Destination File'), QDir.homePath(), self.tr('TXT files (*.txt)'))
+        if not dest:
+            return
+
+        dest = QgsFileUtils.ensureFileNameHasExtension(dest, ['txt'])
+        self.gcp_manager.save_to_file(dest)
 
     def _load(self):
         """
         Loads GCPs from disk
         """
+        src, _ = QFileDialog.getOpenFileName(self, self.tr('Destination File'), QDir.homePath(),
+                                              self.tr('TXT files (*.txt)'))
+        if not src:
+            return
+
+        self.gcp_manager.load_from_file(src)
 
 
 SETTINGS_WIDGET, _ = uic.loadUiType(GuiUtils.get_ui_file_path('settings.ui'))
