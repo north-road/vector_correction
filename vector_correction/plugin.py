@@ -14,6 +14,7 @@ __copyright__ = 'Copyright 2021, North Road'
 __revision__ = '$Format:%H$'
 
 import os
+from typing import Optional
 
 from qgis.PyQt.QtCore import (
     Qt,
@@ -44,15 +45,15 @@ from vector_correction.core.gcp_manager import (
     NotEnoughGcpsException,
     TransformCreationException
 )
-from vector_correction.gui.draw_line_tool import (
-    DrawLineTool,
-    DrawLineToolHandler
-)
+from vector_correction.gui.corrections_dock import CorrectionsDockWidget
 from vector_correction.gui.draw_extent_tool import (
     DrawExtentTool,
     DrawExtentToolHandler
 )
-from vector_correction.gui.corrections_dock import CorrectionsDockWidget
+from vector_correction.gui.draw_line_tool import (
+    DrawLineTool,
+    DrawLineToolHandler
+)
 
 VERSION = '0.0.1'
 
@@ -99,6 +100,7 @@ class VectorCorrectionPlugin:
         self.actions = []
         self.dock = None
 
+        self.aoi: Optional[QgsReferencedRectangle] = None
         self.gcp_manager = GcpManager(self.iface.mapCanvas())
 
     @staticmethod
@@ -145,7 +147,7 @@ class VectorCorrectionPlugin:
         self.actions.append(self.show_aoi_action)
 
         self.aoi_tool = DrawExtentTool(map_canvas=self.iface.mapCanvas(),
-                                     message_bar=self.iface.messageBar())
+                                       message_bar=self.iface.messageBar())
         self.aoi_tool_handler = DrawExtentToolHandler(self.aoi_tool, self.draw_aoi_action)
         self.iface.registerMapToolHandler(self.aoi_tool_handler)
         self.aoi_tool.extent_set.connect(self.set_aoi)
@@ -229,15 +231,16 @@ class VectorCorrectionPlugin:
         """
         Applies the defined corrections to visible features
         """
+        if not self.aoi:
+            return
+
         layer_crs = target_layer.crs()
 
-        canvas_extent = self.iface.mapCanvas().mapSettings().visibleExtent()
-        canvas_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
-        # we need to transform the canvas extent to the layer crs in order to filter features
-        canvas_to_layer_transform = QgsCoordinateTransform(canvas_crs,
-                                                           layer_crs,
-                                                           QgsProject.instance().transformContext())
-        layer_filter_rect = canvas_to_layer_transform.transformBoundingBox(canvas_extent)
+        # we need to transform the AOI extent to the layer crs in order to filter features
+        aoi_to_layer_transform = QgsCoordinateTransform(self.aoi.crs(),
+                                                        layer_crs,
+                                                        QgsProject.instance().transformContext())
+        layer_filter_rect = aoi_to_layer_transform.transformBoundingBox(self.aoi)
 
         request = QgsFeatureRequest()
         request.setFilterRect(layer_filter_rect)
@@ -253,8 +256,8 @@ class VectorCorrectionPlugin:
             transformed_features = self.gcp_manager.transform_features(
                 features=feature_map,
                 feature_crs=layer_crs,
-                extent=canvas_extent,
-                extent_crs=canvas_crs)
+                extent=self.aoi,
+                extent_crs=self.aoi.crs())
         except NotEnoughGcpsException as e:
             self.iface.messageBar().pushCritical('', str(e))
             return False
@@ -282,7 +285,7 @@ class VectorCorrectionPlugin:
         """
         self.show_aoi_action.setEnabled(True)
         self.apply_correction_action.setEnabled(True)
-        self.gcp_manager.set_aoi(aoi)
+        self.aoi = aoi
 
         self.show_aoi_action.setChecked(True)
 
@@ -291,4 +294,3 @@ class VectorCorrectionPlugin:
         Shows (or hides) the current area of interest
         """
         self.aoi_tool.show_aoi(visible)
-
