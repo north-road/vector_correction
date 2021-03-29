@@ -54,6 +54,7 @@ from vector_correction.gui.draw_line_tool import (
     DrawLineTool,
     DrawLineToolHandler
 )
+from vector_correction.gui.gui_utils import GuiUtils
 
 VERSION = '0.0.1'
 
@@ -135,10 +136,12 @@ class VectorCorrectionPlugin:
         self.iface.addToolBar(self.toolbar)
 
         self.draw_aoi_action = QAction(self.tr('Draw AOI'), parent=self.toolbar)
+        self.draw_aoi_action.setIcon(GuiUtils.get_icon('draw_extent.svg'))
         self.toolbar.addAction(self.draw_aoi_action)
         self.actions.append(self.draw_aoi_action)
 
         self.show_aoi_action = QAction(self.tr('Show AOI'), parent=self.toolbar)
+        self.show_aoi_action.setIcon(GuiUtils.get_icon('show_extent.svg'))
         self.show_aoi_action.setCheckable(True)
         self.show_aoi_action.setChecked(False)
         self.show_aoi_action.setEnabled(False)
@@ -153,15 +156,18 @@ class VectorCorrectionPlugin:
         self.aoi_tool.extent_set.connect(self.set_aoi)
 
         self.draw_correction_action = QAction(self.tr('Draw Correction'), parent=self.toolbar)
+        self.draw_correction_action.setIcon(GuiUtils.get_icon('draw_correction.svg'))
         self.toolbar.addAction(self.draw_correction_action)
         self.actions.append(self.draw_correction_action)
 
         self.show_gcps_action = QAction(self.tr('Show GCPS'), parent=self.toolbar)
+        self.show_gcps_action.setIcon(GuiUtils.get_icon('gcp_table.svg'))
         self.toolbar.addAction(self.show_gcps_action)
         self.actions.append(self.show_gcps_action)
         self.dock.setToggleVisibilityAction(self.show_gcps_action)
 
         self.apply_correction_action = QAction(self.tr('Apply Correction'), parent=self.toolbar)
+        self.apply_correction_action.setIcon(GuiUtils.get_icon('apply_corrections.svg'))
         self.toolbar.addAction(self.apply_correction_action)
         self.apply_correction_action.triggered.connect(self.apply_correction)
         self.actions.append(self.apply_correction_action)
