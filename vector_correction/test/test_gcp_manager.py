@@ -63,10 +63,10 @@ class GCPManagerTest(unittest.TestCase):
 
         self.assertEqual(manager.rowCount(), 1)
         self.assertEqual(manager.data(manager.index(0, 0)), 1)
-        self.assertEqual(manager.data(manager.index(0, 1)), 10.0)
-        self.assertEqual(manager.data(manager.index(0, 2)), 11.0)
-        self.assertEqual(manager.data(manager.index(0, 3)), 20.0)
-        self.assertEqual(manager.data(manager.index(0, 4)), 22.0)
+        self.assertEqual(manager.data(manager.index(0, 1)), '10.00')
+        self.assertEqual(manager.data(manager.index(0, 2)), '11.00')
+        self.assertEqual(manager.data(manager.index(0, 3)), '20.00')
+        self.assertEqual(manager.data(manager.index(0, 4)), '22.00')
 
         self.assertEqual(manager.gcps,
                          [Gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), QgsCoordinateReferenceSystem('EPSG:4326'))])
@@ -76,15 +76,15 @@ class GCPManagerTest(unittest.TestCase):
 
         self.assertEqual(manager.rowCount(), 2)
         self.assertEqual(manager.data(manager.index(0, 0)), 1)
-        self.assertEqual(manager.data(manager.index(0, 1)), 10.0)
-        self.assertEqual(manager.data(manager.index(0, 2)), 11.0)
-        self.assertEqual(manager.data(manager.index(0, 3)), 20.0)
-        self.assertEqual(manager.data(manager.index(0, 4)), 22.0)
+        self.assertEqual(manager.data(manager.index(0, 1)), '10.00')
+        self.assertEqual(manager.data(manager.index(0, 2)), '11.00')
+        self.assertEqual(manager.data(manager.index(0, 3)), '20.00')
+        self.assertEqual(manager.data(manager.index(0, 4)), '22.00')
         self.assertEqual(manager.data(manager.index(1, 0)), 2)
-        self.assertEqual(manager.data(manager.index(1, 1)), 100.0)
-        self.assertEqual(manager.data(manager.index(1, 2)), 101.0)
-        self.assertEqual(manager.data(manager.index(1, 3)), 200.0)
-        self.assertEqual(manager.data(manager.index(1, 4)), 202.0)
+        self.assertEqual(manager.data(manager.index(1, 1)), '100.00')
+        self.assertEqual(manager.data(manager.index(1, 2)), '101.00')
+        self.assertEqual(manager.data(manager.index(1, 3)), '200.00')
+        self.assertEqual(manager.data(manager.index(1, 4)), '202.00')
 
         self.assertEqual(manager.gcps,
                          [Gcp(QgsPointXY(10, 11), QgsPointXY(20, 22), QgsCoordinateReferenceSystem('EPSG:4326')),
