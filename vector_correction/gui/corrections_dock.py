@@ -145,15 +145,16 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         """
         Exports GCP corrections to a line layer
         """
-        filter = QgsVectorFileWriter.fileFilterString()
-        dest, selected_filter = QFileDialog.getSaveFileName(self, self.tr('Destination File'), QDir.homePath(), filter)
+        file_filter = QgsVectorFileWriter.fileFilterString()
+        dest, selected_filter = QFileDialog.getSaveFileName(self, self.tr('Destination File'), QDir.homePath(),
+                                                            file_filter)
         if not dest:
             return
         dest = QgsFileUtils.ensureFileNameHasExtension(dest, QgsFileUtils.extensionsFromFilter(selected_filter))
 
         new_filename, new_layer, error = self.gcp_manager.export_to_layer(dest)
         if not error:
-            source = QgsProviderRegistry.instance().encodeUri('ogr', {'path': new_filename, 'layerName': new_layer })
+            source = QgsProviderRegistry.instance().encodeUri('ogr', {'path': new_filename, 'layerName': new_layer})
             vl = QgsVectorLayer(source, self.tr('Corrections'))
             QgsProject.instance().addMapLayer(vl)
 
@@ -161,7 +162,8 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         """
         Saves GCPs to disk
         """
-        dest, _ = QFileDialog.getSaveFileName(self, self.tr('Destination File'), QDir.homePath(), self.tr('TXT files (*.txt)'))
+        dest, _ = QFileDialog.getSaveFileName(self, self.tr('Destination File'), QDir.homePath(),
+                                              self.tr('TXT files (*.txt)'))
         if not dest:
             return
 
@@ -173,7 +175,7 @@ class PointListWidget(QgsPanelWidget, WIDGET):
         Loads GCPs from disk
         """
         src, _ = QFileDialog.getOpenFileName(self, self.tr('Destination File'), QDir.homePath(),
-                                              self.tr('TXT files (*.txt)'))
+                                             self.tr('TXT files (*.txt)'))
         if not src:
             return
 

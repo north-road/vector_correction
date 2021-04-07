@@ -159,21 +159,21 @@ class GcpManager(QAbstractTableModel):
 
         return None
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int):
+    def headerData(self,  # pylint: disable=missing-function-docstring
+                   section: int,
+                   orientation: Qt.Orientation,
+                   role: int):
         if orientation == Qt.Horizontal:
             if role in (Qt.DisplayRole, Qt.ToolTipRole):
-                if section == GcpManager.COLUMN_ID:
-                    return self.tr('Row')
-                if section == GcpManager.COLUMN_ORIGIN_X:
-                    return self.tr('Source X')
-                if section == GcpManager.COLUMN_ORIGIN_Y:
-                    return self.tr('Source Y')
-                if section == GcpManager.COLUMN_DESTINATION_X:
-                    return self.tr('Dest X')
-                if section == GcpManager.COLUMN_DESTINATION_Y:
-                    return self.tr('Dest Y')
-                if section == GcpManager.COLUMN_RESIDUAL:
-                    return self.tr('Residual')
+                return {
+                    GcpManager.COLUMN_ID: self.tr('Row'),
+                    GcpManager.COLUMN_ORIGIN_X: self.tr('Source X'),
+                    GcpManager.COLUMN_ORIGIN_Y: self.tr('Source Y'),
+                    GcpManager.COLUMN_DESTINATION_X: self.tr('Dest X'),
+                    GcpManager.COLUMN_DESTINATION_Y: self.tr('Dest Y'),
+                    GcpManager.COLUMN_RESIDUAL: self.tr('Residual')
+                }.get(section, None)
+
         return None
 
     def clear(self):
@@ -388,7 +388,7 @@ class GcpManager(QAbstractTableModel):
         options = QgsVectorFileWriter.SaveVectorOptions()
 
         options.driverName = QgsVectorFileWriter.driverForExtension(os.path.splitext(path)[1])
-        error_code, error, new_filename, new_layer = QgsVectorFileWriter.writeAsVectorFormatV3(layer, path,
+        _, error, new_filename, new_layer = QgsVectorFileWriter.writeAsVectorFormatV3(layer, path,
                                                                                                QgsProject.instance().transformContext(),
                                                                                                options)
         return new_filename, new_layer, error
