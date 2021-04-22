@@ -10,8 +10,6 @@
  ***************************************************************************/
 """
 
-from .plugin import VectorCorrectionPlugin
-
 
 # noinspection PyPep8Naming
 def classFactory(iface):  # pylint: disable=invalid-name
@@ -21,4 +19,5 @@ def classFactory(iface):  # pylint: disable=invalid-name
     :type iface: QgsInterface
     """
     #
+    from .plugin import VectorCorrectionPlugin  # pylint: disable=import-outside-toplevel
     return VectorCorrectionPlugin(iface)
