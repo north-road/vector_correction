@@ -42,8 +42,8 @@ def plugin_metadata_as_dict() -> dict:
     if PLG_METADATA_FILE.is_file():
         config.read(PLG_METADATA_FILE.resolve(), encoding="UTF-8")
         return {s: dict(config.items(s)) for s in config.sections()}
-    else:
-        raise IOError("Plugin metadata.txt not found at: %s" % PLG_METADATA_FILE)
+
+    raise IOError("Plugin metadata.txt not found at: %s" % PLG_METADATA_FILE)
 
 
 # -- VARIABLES --------------------------------------------------------------------
@@ -73,10 +73,8 @@ __uri__ = __uri_repository__
 
 __version__ = __plugin_md__.get("general").get("version")
 __version_info__ = tuple(
-    [
         int(num) if num.isdigit() else num
         for num in __version__.replace("-", ".", 1).split(".")
-    ]
 )
 
 # #############################################################################
