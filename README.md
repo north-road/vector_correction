@@ -11,6 +11,8 @@ The plugin offers a range of techniques for warping layers, including
 - Thin Plate Splines
 - Polynomial (Orders 1-3)
 
+*The plugin requires QGIS 3.20 or later.*
+
 Documentation is available at [https://north-road.github.io/vector_correction/](https://north-road.github.io/vector_correction/).
 
 The plugin is created by [North Road Consulting](http://north-road.com) on behalf of Natural Resources Canada.

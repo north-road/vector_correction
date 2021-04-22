@@ -15,6 +15,8 @@ The plugin offers a range of techniques for warping layers, including
 - Thin Plate Splines
 - Polynomial (Orders 1-3)
 
+*The plugin requires QGIS 3.20 or later.*
+
 The plugin is created by [North Road Consulting](http://north-road.com) on behalf of Natural Resources Canada.
 
 ## Workflow
