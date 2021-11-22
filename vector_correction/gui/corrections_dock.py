@@ -220,6 +220,10 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
         self.extent_style_button.changed.connect(self._extent_symbol_changed)
         self.combo_method.currentIndexChanged[int].connect(self._method_changed)
 
+        self.preview_color_button.setAllowOpacity(True)
+        self.preview_color_button.setColor(SettingsRegistry.preview_color())
+        self.preview_color_button.colorChanged.connect(self._preview_color_changed)
+
     def restore_settings(self):
         """
         Restores saved settings
@@ -254,6 +258,12 @@ class SettingsWidget(QgsPanelWidget, SETTINGS_WIDGET):
             )
         )
         self.transform_method_changed.emit()
+
+    def _preview_color_changed(self):
+        """
+        Called when the feature preview color is changed
+        """
+        SettingsRegistry.set_preview_color(self.preview_color_button.color())
 
 
 class CorrectionsDockWidget(QgsDockWidget):

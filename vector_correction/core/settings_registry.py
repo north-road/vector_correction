@@ -16,6 +16,9 @@ __revision__ = '$Format:%H$'
 from qgis.PyQt.QtXml import (
     QDomDocument
 )
+from qgis.PyQt.QtGui import (
+    QColor
+)
 from qgis.analysis import (
     QgsGcpTransformerInterface
 )
@@ -189,6 +192,24 @@ class SettingsRegistry:
 
         settings = QgsSettings()
         settings.setValue('vector_corrections/extent_symbol', doc.toString(), QgsSettings.Plugins)
+
+    @staticmethod
+    def preview_color() -> QColor:
+        """
+        Returns the feature preview color
+        """
+        settings = QgsSettings()
+        return QgsSymbolLayerUtils.decodeColor(settings.value('vector_corrections/preview_color',
+                                                              QgsSymbolLayerUtils.encodeColor(QColor(200, 200, 200)),
+                                                              str, QgsSettings.Plugins))
+
+    @staticmethod
+    def set_preview_color(color: QColor):
+        """
+        Sets the feature preview color
+        """
+        settings = QgsSettings()
+        settings.setValue('vector_corrections/preview_color', QgsSymbolLayerUtils.encodeColor(color), QgsSettings.Plugins)
 
 
 SETTINGS_REGISTRY = SettingsRegistry()

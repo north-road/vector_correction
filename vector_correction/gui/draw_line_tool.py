@@ -35,6 +35,8 @@ from qgis.gui import (
     QgsAbstractMapToolHandler
 )
 
+from vector_correction.core.settings_registry import SETTINGS_REGISTRY
+
 
 class DrawLineTool(QgsMapToolDigitizeFeature):
     """
@@ -101,6 +103,8 @@ class DrawLineTool(QgsMapToolDigitizeFeature):
 
                 if geometries:
                     self.rubber_band = QgsRubberBand(self.canvas(), QgsWkbTypes.LineGeometry)
+                    from qgis.PyQt.QtGui import QColor
+                    self.rubber_band.setStrokeColor(SETTINGS_REGISTRY.preview_color())
                     for g in geometries:
                         self.rubber_band.addGeometry(g, doUpdate=False)
 
