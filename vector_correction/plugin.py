@@ -56,7 +56,7 @@ from vector_correction.gui.draw_line_tool import (
 )
 from vector_correction.gui.gui_utils import GuiUtils
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
 
 class VectorCorrectionPlugin:
