@@ -397,7 +397,7 @@ class GcpManager(QAbstractTableModel):
         """
         Saves the GCPs to a file
         """
-        with open(path, 'wt') as f:
+        with open(path, 'wt', encoding='utf8') as f:
             for gcp in self.gcps:
                 f.write(gcp.to_string() + '\n')
 
@@ -405,7 +405,7 @@ class GcpManager(QAbstractTableModel):
         """
         Loads GCPs from a file
         """
-        with open(path, 'rt') as f:
+        with open(path, 'rt', encoding='utf8') as f:
             for line in f.readlines():
                 gcp = Gcp.from_string(line)
                 if gcp is not None:
